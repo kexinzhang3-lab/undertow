@@ -1,0 +1,4149 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="暗流"/>
+<link rel="apple-touch-icon" href="icon.png"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#020810"/>
+<title>暗流 · Undertow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Noto+Serif+SC:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ─── RESET & BASE ─────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+::-webkit-scrollbar{display:none}
+html{height:100%;overflow:hidden}
+body{
+  height:100%;
+  width:100%;
+  overflow:hidden;
+  background:#020810;
+  color:rgba(200,225,255,0.85);
+  font-family:'Noto Serif SC','Noto Serif',serif;
+  font-weight:300;
+  -webkit-font-smoothing:antialiased;
+  position:relative;
+  cursor:default;
+  user-select:none;
+}
+/* ─── CANVAS BACKGROUND ────────────────────────────────────── */
+#waterCanvas{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  z-index:0;
+  pointer-events:none;
+}
+/* ─── GRAIN OVERLAY ────────────────────────────────────────── */
+.grain{
+  position:fixed;
+  inset:-50%;
+  width:200%;
+  height:200%;
+  z-index:1;
+  pointer-events:none;
+  opacity:0.028;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  animation:grainShift 0.4s steps(1) infinite;
+}
+@keyframes grainShift{
+  0%{transform:translate(0,0)}
+  25%{transform:translate(-2%,-1%)}
+  50%{transform:translate(1%,2%)}
+  75%{transform:translate(-1%,1%)}
+  100%{transform:translate(2%,-2%)}
+}
+/* ─── SCREENS ──────────────────────────────────────────────── */
+.screen{
+  position:fixed;
+  inset:0;
+  z-index:10;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  transition:opacity 0.9s cubic-bezier(0.4,0,0.2,1),transform 0.9s cubic-bezier(0.4,0,0.2,1);
+}
+.screen.hidden{
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(12px);
+}
+/* ─── INTRO SCREEN ─────────────────────────────────────────── */
+#introScreen{
+  padding:2rem;
+  gap:0;
+}
+.intro-star{
+  width:48px;
+  height:48px;
+  margin-bottom:2.8rem;
+  opacity:0;
+  animation:starReveal 2s ease 0.6s forwards;
+}
+@keyframes starReveal{
+  to{opacity:1}
+}
+.intro-wordmark{
+  font-family:'IM Fell English',serif;
+  font-size:clamp(2rem,6vw,3rem);
+  font-weight:400;
+  letter-spacing:0.35em;
+  color:rgba(210,235,255,0.92);
+  text-transform:uppercase;
+  opacity:0;
+  animation:fadeUp 1.4s ease 1s forwards;
+  margin-bottom:0.5rem;
+}
+.intro-zh{
+  font-size:clamp(0.75rem,2vw,0.88rem);
+  letter-spacing:0.55em;
+  color:rgba(130,175,230,0.55);
+  opacity:0;
+  animation:fadeUp 1.4s ease 1.3s forwards;
+  margin-bottom:3.5rem;
+}
+.intro-tagline{
+  max-width:420px;
+  text-align:center;
+  font-size:clamp(0.82rem,2.2vw,0.96rem);
+  line-height:2.1;
+  color:rgba(170,210,250,0.65);
+  letter-spacing:0.04em;
+  opacity:0;
+  animation:fadeUp 1.4s ease 1.7s forwards;
+  margin-bottom:3.8rem;
+}
+.intro-tagline em{
+  font-style:normal;
+  color:rgba(180,220,255,0.85);
+}
+.intro-begin{
+  opacity:0;
+  animation:fadeUp 1.4s ease 2.2s forwards;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:1rem;
+}
+.btn-begin{
+  background:transparent;
+  border:1px solid rgba(100,160,230,0.35);
+  color:rgba(170,210,250,0.8);
+  font-family:'Noto Serif SC',serif;
+  font-size:0.88rem;
+  letter-spacing:0.25em;
+  padding:0.85rem 2.8rem;
+  border-radius:100px;
+  cursor:pointer;
+  transition:all 0.4s ease;
+  box-shadow:0 0 20px rgba(60,120,220,0.08);
+}
+.btn-begin:hover{
+  border-color:rgba(120,180,255,0.6);
+  color:rgba(200,230,255,0.95);
+  box-shadow:0 0 35px rgba(60,120,220,0.2);
+}
+.intro-note{
+  font-size:0.72rem;
+  color:rgba(100,150,210,0.4);
+  letter-spacing:0.12em;
+}
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:translateY(0)}
+}
+/* ─── MAIN APP SCREEN ──────────────────────────────────────── */
+#appScreen{
+  align-items:stretch;
+  justify-content:stretch;
+  padding:0;
+}
+/* ─── TOP BAR ──────────────────────────────────────────────── */
+.topbar{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:50;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:max(1rem,env(safe-area-inset-top)) 1.2rem 0.8rem;
+  background:linear-gradient(to bottom,rgba(2,8,16,0.7) 0%,transparent 100%);
+  pointer-events:none;
+}
+.topbar-left,.topbar-right{
+  display:flex;
+  align-items:center;
+  gap:0.6rem;
+  pointer-events:auto;
+}
+.day-badge{
+  font-size:0.72rem;
+  letter-spacing:0.18em;
+  color:rgba(120,170,230,0.55);
+  padding:0.3rem 0.8rem;
+  border:1px solid rgba(80,130,200,0.18);
+  border-radius:100px;
+  background:rgba(5,15,35,0.5);
+  backdrop-filter:blur(12px);
+}
+.topbar-btn{
+  background:rgba(5,15,35,0.5);
+  backdrop-filter:blur(12px);
+  border:1px solid rgba(80,130,200,0.18);
+  color:rgba(150,195,245,0.7);
+  font-family:inherit;
+  font-size:0.72rem;
+  letter-spacing:0.15em;
+  padding:0.3rem 0.85rem;
+  border-radius:100px;
+  cursor:pointer;
+  transition:all 0.3s ease;
+}
+.topbar-btn:hover{
+  border-color:rgba(100,160,240,0.35);
+  color:rgba(180,220,255,0.9);
+}
+/* ─── LAYOUT ───────────────────────────────────────────────── */
+.app-layout{
+  display:grid;
+  grid-template-columns:280px 1fr;
+  height:100%;
+  width:100%;
+  gap:0.75rem;
+  padding:4.5rem 0.75rem calc(7.5rem + env(safe-area-inset-bottom)) 0.75rem;
+}
+/* ─── SIDEBAR ──────────────────────────────────────────────── */
+#sidebar{
+  background:rgba(4,12,28,0.5);
+  backdrop-filter:blur(24px) saturate(160%);
+  border:1px solid rgba(80,130,200,0.14);
+  border-radius:20px;
+  overflow-y:auto;
+  padding:1.2rem 1rem;
+  display:flex;
+  flex-direction:column;
+  gap:0.6rem;
+}
+.sidebar-tools {
+  margin-top: auto;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(80, 130, 200, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sidebar-tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-align: left;
+  width: 100%;
+}
+.sidebar-tool-btn:hover:not(:disabled) {
+  background: rgba(8, 20, 50, 0.5);
+  border-color: rgba(80, 130, 200, 0.15);
+}
+.sidebar-tool-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.tool-icon {
+  font-size: 0.8rem;
+  color: rgba(100, 155, 230, 0.5);
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.tool-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: rgba(140, 190, 255, 0.6);
+  font-family: 'Noto Serif SC', serif;
+}
+.sidebar-title{
+  font-size:0.68rem;
+  letter-spacing:0.28em;
+  color:rgba(100,150,220,0.45);
+  margin-bottom:0.4rem;
+  padding:0 0.2rem;
+}
+.history-card{
+  background:rgba(10,24,52,0.66);
+  border:1px solid rgba(88,142,214,0.2);
+  border-radius:14px;
+  padding:0.75rem 0.85rem;
+  cursor:pointer;
+  transition:all 0.3s ease;
+}
+.history-card:hover{
+  border-color:rgba(108,170,246,0.36);
+  background:rgba(14,32,68,0.78);
+}
+.history-card.is-past{
+  background:rgba(7,18,40,0.62);
+  border-color:rgba(78,126,196,0.17);
+}
+.history-card.active{
+  border-color:rgba(110,175,255,0.42);
+  background:rgba(14,32,70,0.72);
+  box-shadow:0 0 0 1px rgba(120,185,255,0.15) inset;
+}
+.hc-day{
+  font-size:0.68rem;
+  letter-spacing:0.2em;
+  color:rgba(132,186,246,0.86);
+  margin-bottom:0.3rem;
+}
+.hc-snippet{
+  font-size:0.82rem;
+  line-height:1.65;
+  color:rgba(194,228,255,0.9);
+}
+.hc-signal{
+  margin-top:0.35rem;
+  font-size:0.7rem;
+  color:rgba(122,176,238,0.72);
+  font-style:italic;
+}
+.history-card.is-past .hc-day{
+  color:rgba(112,166,228,0.72);
+}
+.history-card.is-past .hc-snippet{
+  color:rgba(170,208,242,0.8);
+}
+.history-card.is-past .hc-signal{
+  color:rgba(104,156,220,0.62);
+}
+.sidebar-empty{
+  font-size:0.82rem;
+  color:rgba(100,150,220,0.35);
+  text-align:center;
+  padding:2rem 0;
+  line-height:1.8;
+}
+/* ─── CHAT AREA ────────────────────────────────────────────── */
+#chatArea{
+  background:rgba(4,12,28,0.45);
+  backdrop-filter:blur(24px) saturate(160%);
+  border:1px solid rgba(80,130,200,0.14);
+  border-radius:20px;
+  overflow-y:auto;
+  padding:1.5rem 1.8rem;
+  display:flex;
+  flex-direction:column;
+  gap:1.4rem;
+  scroll-behavior:smooth;
+}
+/* Welcome state */
+.chat-welcome{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  gap:1rem;
+  opacity:0.55;
+  text-align:center;
+}
+.chat-welcome-star{
+  width:28px;
+  height:28px;
+  opacity:0.6;
+  animation:starPulse 4s ease-in-out infinite;
+}
+.chat-welcome-text{
+  font-size:0.85rem;
+  line-height:2;
+  color:rgba(140,185,240,0.7);
+  letter-spacing:0.06em;
+}
+/* Messages */
+.msg{
+  display:flex;
+  flex-direction:column;
+  max-width:85%;
+  opacity:0;
+  animation:msgIn 0.5s ease forwards;
+}
+.msg.user{
+  align-self:flex-end;
+  align-items:flex-end;
+}
+.msg.ai{
+  align-self:flex-start;
+  align-items:flex-start;
+}
+@keyframes msgIn{
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.msg-label{
+  font-size:0.65rem;
+  letter-spacing:0.2em;
+  margin-bottom:0.4rem;
+  opacity:0.45;
+}
+.msg.user .msg-label{color:rgba(140,190,255,0.7)}
+.msg.ai .msg-label{color:rgba(100,155,220,0.7)}
+.msg-bubble{
+  padding:0.85rem 1.1rem;
+  border-radius:18px;
+  font-size:0.9rem;
+  line-height:1.9;
+  white-space:pre-wrap;
+  word-break:break-word;
+  user-select:text;
+}
+.msg.user .msg-bubble{
+  background: rgba(14, 38, 88, 0.45);
+  border: 1px solid rgba(70, 120, 200, 0.16);
+  border-radius:18px 18px 4px 18px;
+  color: rgba(195, 225, 255, 0.85);
+}
+.msg.ai .msg-bubble{
+  background:transparent;
+  border:none;
+  padding:0;
+  color:rgba(185,220,255,0.88);
+}
+/* Streaming cursor */
+.cursor-blink{
+  display:inline-block;
+  width:1.5px;
+  height:1em;
+  background:rgba(120,180,255,0.6);
+  vertical-align:text-bottom;
+  margin-left:2px;
+  animation:blink 1.1s ease-in-out infinite;
+}
+@keyframes blink{
+  0%,100%{opacity:1}
+  50%{opacity:0}
+}
+/* Error message */
+.msg-error{
+  align-self:flex-start;
+  font-size:0.8rem;
+  color:rgba(200,120,120,0.55);
+  padding:0.5rem 0;
+  letter-spacing:0.05em;
+}
+/* ─── COMPOSER ─────────────────────────────────────────────── */
+.composer{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  z-index:50;
+  padding:0.75rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom));
+  background:linear-gradient(to top,rgba(2,8,16,0.9) 60%,transparent 100%);
+}
+.composer-inner{
+  background:rgba(5,15,35,0.7);
+  backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid rgba(80,130,200,0.22);
+  border-radius:18px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.5),inset 0 1px 0 rgba(150,200,255,0.06);
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:0.65rem;
+  padding:0.75rem 0.75rem 0.75rem 1.1rem;
+  align-items:end;
+  max-width:900px;
+  margin:0 auto;
+}
+#userInput{
+  background:transparent;
+  border:none;
+  outline:none;
+  color:rgba(200,230,255,0.9);
+  font-family:'Noto Serif SC',serif;
+  font-size:0.9rem;
+  line-height:1.7;
+  resize:none;
+  min-height:26px;
+  max-height:28vh;
+  overflow-y:auto;
+  padding:0;
+  caret-color:rgba(120,180,255,0.8);
+}
+#userInput::placeholder{
+  color:rgba(100,150,220,0.35);
+  font-style:italic;
+}
+.send-btn{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  background:rgba(7,22,48,0.72);
+  border:1px solid rgba(60,105,170,0.28);
+  color:rgba(138,182,235,0.8);
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  transition:all 0.25s ease;
+}
+.send-btn:hover{
+  background:rgba(10,28,58,0.8);
+  border-color:rgba(76,122,190,0.38);
+  box-shadow:0 0 18px rgba(35,78,138,0.2);
+}
+.send-btn:disabled{
+  opacity:0.35;
+  cursor:not-allowed;
+}
+.send-btn svg{
+  width:16px;
+  height:16px;
+}
+.send-btn-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+/* ─── DECISION NUDGE ───────────────────────────────────────── */
+.decision-nudge{
+  position:fixed;
+  bottom:calc(6.8rem + env(safe-area-inset-bottom));
+  left:50%;
+  transform:translateX(-50%) translateY(8px);
+  z-index:48;
+  opacity:0;
+  transition:opacity 0.4s ease,transform 0.4s ease;
+  pointer-events:none;
+  white-space:nowrap;
+}
+.decision-nudge.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+  pointer-events:auto;
+}
+.decision-nudge-btn{
+  background:rgba(8,25,60,0.7);
+  backdrop-filter:blur(20px);
+  border:1px solid rgba(80,140,230,0.25);
+  color:rgba(160,210,255,0.8);
+  font-family:'Noto Serif SC',serif;
+  font-size:0.78rem;
+  letter-spacing:0.12em;
+  padding:0.55rem 1.4rem;
+  border-radius:100px;
+  cursor:pointer;
+  transition:all 0.3s ease;
+  box-shadow:0 4px 20px rgba(0,0,10,0.4);
+}
+.decision-nudge-btn:hover{
+  border-color:rgba(100,165,255,0.45);
+  color:rgba(190,225,255,0.95);
+  box-shadow:0 4px 30px rgba(40,100,255,0.18);
+}
+/* ─── DECISION DRAWER ──────────────────────────────────────── */
+.decision-drawer{
+  position:fixed;
+  inset:0;
+  z-index:200;
+  display:flex;
+  align-items:flex-end;
+  pointer-events:none;
+}
+.decision-drawer.open{pointer-events:auto}
+.drawer-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(1,4,12,0.7);
+  backdrop-filter:blur(6px);
+  opacity:0;
+  transition:opacity 0.4s ease;
+}
+.decision-drawer.open .drawer-backdrop{opacity:1}
+.drawer-panel{
+  position:relative;
+  z-index:1;
+  width:100%;
+  max-width:700px;
+  margin:0 auto;
+  background:rgba(4,14,34,0.92);
+  backdrop-filter:blur(40px) saturate(180%);
+  border:1px solid rgba(80,130,200,0.2);
+  border-radius:24px 24px 0 0;
+  padding:1.8rem 1.6rem calc(1.8rem + env(safe-area-inset-bottom));
+  transform:translateY(100%);
+  transition:transform 0.45s cubic-bezier(0.4,0,0.2,1);
+  max-height:70vh;
+  overflow-y:auto;
+}
+.decision-drawer.open .drawer-panel{transform:translateY(0)}
+.drawer-handle{
+  width:36px;
+  height:3px;
+  background:rgba(100,150,220,0.25);
+  border-radius:2px;
+  margin:0 auto 1.8rem;
+}
+.drawer-title{
+  font-size:0.88rem;
+  letter-spacing:0.2em;
+  color:rgba(160,205,255,0.75);
+  margin-bottom:1.4rem;
+  text-align:center;
+}
+.drawer-label{
+  font-size:0.72rem;
+  letter-spacing:0.18em;
+  color:rgba(100,155,220,0.5);
+  margin-bottom:0.5rem;
+  display:block;
+}
+.drawer-input{
+  width:100%;
+  background:rgba(5,18,45,0.6);
+  border:1px solid rgba(80,130,200,0.18);
+  border-radius:12px;
+  color:rgba(190,225,255,0.85);
+  font-family:'Noto Serif SC',serif;
+  font-size:0.85rem;
+  line-height:1.7;
+  padding:0.75rem 0.9rem;
+  outline:none;
+  resize:none;
+  min-height:56px;
+  margin-bottom:1rem;
+  transition:border-color 0.3s ease;
+}
+.drawer-input:focus{border-color:rgba(100,165,255,0.35)}
+.drawer-input::placeholder{color:rgba(80,130,200,0.35);font-style:italic}
+.drawer-submit{
+  width:100%;
+  background:rgba(15,45,105,0.6);
+  border:1px solid rgba(80,140,230,0.28);
+  color:rgba(170,215,255,0.85);
+  font-family:'Noto Serif SC',serif;
+  font-size:0.82rem;
+  letter-spacing:0.18em;
+  padding:0.85rem;
+  border-radius:12px;
+  cursor:pointer;
+  transition:all 0.3s ease;
+  margin-bottom:1.2rem;
+}
+.drawer-submit:hover{
+  background:rgba(20,55,125,0.75);
+  border-color:rgba(100,165,255,0.45);
+}
+.drawer-submit:disabled{opacity:0.4;cursor:not-allowed}
+.drawer-result{
+  font-size:0.87rem;
+  line-height:1.95;
+  color:rgba(180,220,255,0.82);
+  min-height:1rem;
+  white-space:pre-wrap;
+}
+.drawer-desc {
+  font-size: 0.8rem;
+  line-height: 1.9;
+  color: rgba(145, 195, 250, 0.66);
+  margin-bottom: 0.9rem;
+}
+.ending-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+  flex-wrap: wrap;
+}
+.ending-btn {
+  background: rgba(5, 18, 45, 0.6);
+  border: 1px solid rgba(80, 130, 200, 0.22);
+  border-radius: 100px;
+  color: rgba(160, 210, 255, 0.8);
+  font-family: 'Noto Serif SC', serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.ending-btn:hover {
+  border-color: rgba(100, 165, 255, 0.4);
+  color: rgba(190, 225, 255, 0.95);
+}
+.ending-btn-skip {
+  opacity: 0.5;
+}
+.ending-btn-skip:hover {
+  opacity: 0.8;
+}
+/* 彩蛋气泡 */
+.ending-egg-bubble {
+  color: rgba(160, 210, 255, 0.75) !important;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  line-height: 2;
+}
+
+/* 今日回顾标签 */
+.ending-review-label {
+  font-size: 0.6rem !important;
+  letter-spacing: 0.4em !important;
+  color: rgba(100, 150, 220, 0.4) !important;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+
+/* 今日回顾气泡：和普通 AI 消息明显不同 */
+.ending-review-bubble {
+  color: rgba(185, 225, 255, 0.82) !important;
+  font-style: italic;
+  line-height: 2.1 !important;
+  border-left: 1px solid rgba(80, 130, 200, 0.25) !important;
+  padding-left: 1rem !important;
+  letter-spacing: 0.03em;
+}
+
+/* 整个回顾区域有一点点上下边距 */
+.msg.ending-review {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sealed-hint {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.9rem;
+  margin-bottom: 0.4rem;
+  background: rgba(4, 12, 30, 0.6);
+  border: 1px solid rgba(80, 130, 200, 0.12);
+  border-radius: 12px;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.sealed-date {
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  color: rgba(100, 150, 220, 0.4);
+  font-style: italic;
+  flex-shrink: 0;
+}
+
+.sealed-surface-btn {
+  background: transparent;
+  border: 1px solid rgba(80, 130, 200, 0.2);
+  border-radius: 100px;
+  color: rgba(140, 195, 255, 0.6);
+  font-family: 'Noto Serif SC', serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+.sealed-surface-btn:hover {
+  border-color: rgba(100, 165, 255, 0.35);
+  color: rgba(180, 225, 255, 0.85);
+}
+.sealed-surface-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+/* ─── DAY 21 OVERLAY ───────────────────────────────────────── */
+.day21-overlay{
+  position:fixed;
+  inset:0;
+  z-index:300;
+  background:rgba(1,3,10,0.97);
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:2.5rem 2rem;
+  gap:2rem;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 1.2s ease;
+}
+.day21-overlay.visible{opacity:1;pointer-events:auto}
+.day21-label{
+  font-size:0.65rem;
+  letter-spacing:0.45em;
+  color:rgba(100,150,220,0.5);
+  text-transform:uppercase;
+}
+.day21-text{
+  max-width:560px;
+  font-size:clamp(0.9rem,2vw,1.05rem);
+  line-height:2.1;
+  color:rgba(190,225,255,0.88);
+  text-align:center;
+  white-space:pre-wrap;
+}
+.day21-btn{
+  background:transparent;
+  border:1px solid rgba(80,140,230,0.3);
+  color:rgba(160,210,255,0.75);
+  font-family:'Noto Serif SC',serif;
+  font-size:0.78rem;
+  letter-spacing:0.25em;
+  padding:0.75rem 2.2rem;
+  border-radius:100px;
+  cursor:pointer;
+  transition:all 0.4s ease;
+}
+.day21-btn:hover{
+  border-color:rgba(120,180,255,0.55);
+  color:rgba(200,235,255,0.95);
+}
+/* ─── HINT BAR ─────────────────────────────────────────────── */
+.hint-bar{
+  position:fixed;
+  top:max(1rem,env(safe-area-inset-top));
+  left:50%;
+  transform:translateX(-50%);
+  z-index:100;
+  background:rgba(8,22,55,0.8);
+  backdrop-filter:blur(20px);
+  border:1px solid rgba(80,140,220,0.2);
+  border-radius:100px;
+  padding:0.45rem 1.2rem;
+  font-size:0.72rem;
+  letter-spacing:0.15em;
+  color:rgba(160,210,255,0.8);
+  white-space:nowrap;
+  pointer-events:none;
+  animation:hintFloat 3s ease forwards;
+}
+@keyframes hintFloat{
+  0%{opacity:0;transform:translateX(-50%) translateY(-6px)}
+  15%{opacity:1;transform:translateX(-50%) translateY(0)}
+  75%{opacity:1}
+  100%{opacity:0;transform:translateX(-50%) translateY(-4px)}
+}
+/* ─── STAR PULSE ───────────────────────────────────────────── */
+@keyframes starPulse{
+  0%,100%{opacity:0.4;transform:scale(1)}
+  50%{opacity:0.9;transform:scale(1.08)}
+}
+
+.daily-opening-label {
+  font-size: 0.6rem !important;
+  letter-spacing: 0.45em !important;
+  color: rgba(100, 150, 220, 0.35) !important;
+  margin-bottom: 0.5rem;
+}
+
+.daily-opening-bubble {
+  color: rgba(170, 215, 255, 0.75) !important;
+  font-style: italic;
+  line-height: 2.1 !important;
+  white-space: pre-line;
+}
+
+.send-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%) scale(0);
+  background: transparent;
+  border: 1px solid rgba(78, 126, 194, 0.45);
+  border-radius: 50%;
+  animation: rippleOut 0.7s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes rippleOut {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(6);
+    opacity: 0;
+  }
+}
+
+.day-wrap-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.9rem;
+  background: radial-gradient(circle at 50% 48%, rgba(22, 56, 116, 0.2) 0%, rgba(2, 8, 18, 0.9) 58%, rgba(1, 3, 8, 0.96) 100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.day-wrap-curtain.show {
+  display: flex;
+  pointer-events: auto;
+  animation: dayWrapFade 3s ease forwards;
+}
+
+.day-wrap-ring {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  border: 1px solid rgba(115, 178, 255, 0.55);
+  box-shadow: 0 0 46px rgba(70, 130, 255, 0.22), inset 0 0 22px rgba(92, 154, 255, 0.12);
+  animation: dayWrapRing 2.4s ease-in-out infinite;
+}
+
+.day-wrap-text {
+  color: rgba(175, 220, 255, 0.82);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-align: center;
+}
+
+@keyframes dayWrapFade {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes dayWrapRing {
+  0%, 100% {
+    transform: scale(0.92);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+/* ─── MOBILE ───────────────────────────────────────────────── */
+@media(max-width:768px){
+  /* sidebar 在手机端完全不占空间 */
+  #sidebar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+  }
+
+  body.sidebar-open::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(1, 6, 16, 0.55);
+    z-index: 59;
+    pointer-events: none;
+  }
+
+  body.sidebar-open #sidebar {
+    display: flex !important;
+    position: fixed !important;
+    top: calc(4rem + env(safe-area-inset-top));
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(6.4rem + env(safe-area-inset-bottom));
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 1rem 0.9rem !important;
+    border: 1px solid rgba(80,130,200,0.16) !important;
+    border-radius: 16px;
+    overflow-y: auto !important;
+    z-index: 60;
+  }
+
+  /* 布局变成单列，不用 grid */
+  .app-layout {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+
+  /* 对话区域占满全屏 */
+  #chatArea {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding-top: calc(4rem + env(safe-area-inset-top)) !important;
+    padding-bottom: calc(5.8rem + env(safe-area-inset-bottom)) !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 输入框固定在底部，不遮挡任何内容 */
+  .composer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    padding: 0.65rem 0.75rem
+             calc(0.65rem + env(safe-area-inset-bottom))
+             0.75rem !important;
+    background: rgba(2, 8, 18, 0.92) !important;
+    backdrop-filter: blur(30px) !important;
+    border-top: 1px solid rgba(80, 130, 200, 0.12) !important;
+    z-index: 50 !important;
+    border-radius: 0 !important;
+  }
+
+  /* 消息气泡在手机端更宽 */
+  .msg {
+    max-width: 92% !important;
+  }
+
+  /* 欢迎文字往下留点空间 */
+  .chat-welcome {
+    padding-top: 2rem !important;
+  }
+
+  .decision-nudge{
+    bottom:calc(7rem + env(safe-area-inset-bottom));
+  }
+}
+</style>
+<!-- 
+  API Key 配置说明：
+  在下方 CONFIG 对象里填入你自己的 API Key
+  不要把含有真实 Key 的文件推送到公开仓库
+-->
+</head>
+<body>
+<!-- ─── CANVAS ─────────────────────────────────────────────── -->
+<canvas id="waterCanvas"></canvas>
+<div class="grain"></div>
+<!-- ─── INTRO SCREEN ───────────────────────────────────────── -->
+<div id="introScreen" class="screen">
+  <svg class="intro-star" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .sp{animation:starPulseInner 3.5s ease-in-out infinite}
+      @keyframes starPulseInner{0%,100%{opacity:0.5}50%{opacity:1}}
+    </style>
+    <path class="sp" d="M24 4 L25.8 20.2 L42 24 L25.8 27.8 L24 44 L22.2 27.8 L6 24 L22.2 20.2 Z" fill="rgba(130,185,255,0.7)"/>
+    <path class="sp" style="animation-delay:0.5s" d="M24 10 L25.1 22.9 L38 24 L25.1 25.1 L24 38 L22.9 25.1 L10 24 L22.9 22.9 Z" fill="rgba(160,210,255,0.4)"/>
+    <circle cx="24" cy="24" r="1.5" fill="rgba(200,235,255,0.9)" class="sp" style="animation-delay:0.25s"/>
+  </svg>
+  <h1 class="intro-wordmark">Undertow</h1>
+  <p class="intro-zh">暗 流</p>
+  <p class="intro-tagline">
+    一个<em>每天陪你说话</em>的地方。<br/>
+    不评判，不建议，只是<em>真正地记得</em>。<br/>
+    时间久了，它会看见<em>你自己看不见的东西</em>。
+  </p>
+  <div class="intro-begin">
+    <button class="btn-begin" id="beginBtn" onclick="startApp()">开始 · Begin</button>
+    <span class="intro-note">没有账号 · 没有表单 · 只是说说</span>
+  </div>
+</div>
+<!-- ─── APP SCREEN ─────────────────────────────────────────── -->
+<div id="appScreen" class="screen hidden">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="day-badge" id="dayBadge">DAY 1</div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn" id="historyBtn">记录</button>
+      <button class="topbar-btn" id="langBtn">EN</button>
+    </div>
+  </div>
+  <!-- Layout -->
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div class="sidebar-title" id="sidebarTitle">过去的日子</div>
+      <div id="historyList"></div>
+      <div class="sidebar-tools">
+        <button class="sidebar-tool-btn" id="toolSimulate">
+          <span class="tool-icon">◎</span>
+          <span class="tool-label" id="toolSimulateLabel">深入推演</span>
+        </button>
+        <button class="sidebar-tool-btn" id="toolMirror" disabled>
+          <span class="tool-icon">◈</span>
+          <span class="tool-label" id="toolMirrorLabel">回顾这段时间</span>
+        </button>
+        <button class="sidebar-tool-btn" id="toolProfile">
+          <span class="tool-icon">◇</span>
+          <span class="tool-label" id="toolProfileLabel">暗流的侧写</span>
+        </button>
+      </div>
+    </aside>
+    <!-- Chat -->
+    <main id="chatArea">
+      <div class="chat-welcome" id="chatWelcome">
+        <svg class="chat-welcome-star" viewBox="0 0 28 28" fill="none">
+          <path d="M14 2 L15.1 12.9 L26 14 L15.1 15.1 L14 26 L12.9 15.1 L2 14 L12.9 12.9 Z"
+                fill="rgba(120,175,240,0.5)"
+                style="animation:starPulse 4s ease-in-out infinite"/>
+        </svg>
+        <div class="chat-welcome-text" id="welcomeText">
+          今天发生了什么？<br/>随便说说，没有要求。
+        </div>
+      </div>
+    </main>
+  </div>
+  <!-- Composer -->
+  <div class="composer">
+    <div class="composer-inner">
+      <textarea id="userInput" rows="1" placeholder="今天发生了什么？随便说说…"></textarea>
+      <div class="send-btn-wrap">
+        <button class="send-btn" id="sendBtn" title="发送">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 8 L13 8 M9 4 L13 8 L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="decision-drawer" id="profileDrawer">
+  <div class="drawer-backdrop" id="profileDrawerBackdrop"></div>
+  <div class="drawer-panel">
+    <div class="drawer-handle"></div>
+    <div class="drawer-title" id="profileDrawerTitle">
+      暗流的侧写
+    </div>
+    <p class="drawer-desc">
+      这是暗流对你的理解。它不一定全对，但都是真实听见的。
+    </p>
+    <div class="drawer-result" id="profileDrawerContent"
+         style="min-height:4rem;white-space:pre-wrap;line-height:2;font-style:italic;">
+    </div>
+  </div>
+</div>
+<!-- ─── DECISION DRAWER ─────────────────────────────────────── -->
+<div class="decision-drawer" id="decisionDrawer">
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <div class="drawer-panel">
+    <div class="drawer-handle"></div>
+    <div class="drawer-title" id="drawerTitle">决策推演</div>
+    <p class="drawer-desc">
+      说清楚你在纠结什么，暗流会帮你把两条路都走一遍。
+    </p>
+
+    <label class="drawer-label" id="drawerLabelSituation">
+      你现在面临的决定是什么？
+    </label>
+    <textarea class="drawer-input" id="decisionSituation" 
+      rows="2" 
+      placeholder="比如：要不要接受这份工作offer，要不要主动联系他…">
+    </textarea>
+
+    <label class="drawer-label" id="drawerLabelOptions">
+      你的选项有哪些？（写出来，哪怕只有两个）
+    </label>
+    <textarea class="drawer-input" id="decisionOptions" 
+      rows="2"
+      placeholder="选项A：接受 / 选项B：拒绝 / 选项C：再等等…">
+    </textarea>
+
+    <label class="drawer-label" id="drawerLabelFear">
+      你最担心的是什么？
+    </label>
+    <textarea class="drawer-input" id="decisionFear" 
+      rows="2"
+      placeholder="说出来那个最让你不安的部分…">
+    </textarea>
+
+    <button class="drawer-submit" id="drawerSubmit">
+      开始推演
+    </button>
+    <div class="drawer-result" id="drawerResult"></div>
+  </div>
+</div>
+<!-- ─── DAY 21 OVERLAY ─────────────────────────────────────── -->
+<div class="day21-overlay" id="day21Overlay">
+  <div class="day21-label">第 21 天</div>
+  <div class="day21-text" id="day21Text">……</div>
+  <button class="day21-btn" id="day21CloseBtn">我看见了</button>
+</div>
+<div class="day-wrap-curtain" id="dayWrapCurtain" aria-hidden="true">
+  <div class="day-wrap-ring"></div>
+  <div class="day-wrap-text">水面正在收拢今天的回声</div>
+</div>
+<script>
+/* ════════════════════════════════════════════════════════════
+   CONFIG — 填入你的 API 信息，不要提交真实 Key 到 GitHub
+════════════════════════════════════════════════════════════ */
+const CONFIG = {
+  anthropicBaseUrl: 'https://your-api-endpoint/v1',
+  claudeApiKey: '',
+  model: 'DeepSeek-V3.2',
+};
+
+function buildApiUrl(path) {
+  const base = (CONFIG.anthropicBaseUrl || '').replace(/\/+$/, '');
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${p}`;
+}
+/* ════════════════════════════════════════════════════════════
+   WATER CANVAS — fluid blob animation
+════════════════════════════════════════════════════════════ */
+(function initWater() {
+  const canvas = document.getElementById('waterCanvas');
+  const ctx    = canvas.getContext('2d');
+  let W, H, t = 0;
+  // Blobs: each has position, velocity, size, colour stop values
+  const blobs = [
+    { x:0.25, y:0.35, vx:0.00018, vy:0.00012, r:0.55, hue:210, sat:70, light:18 },
+    { x:0.72, y:0.62, vx:-0.00015, vy:0.00020, r:0.48, hue:220, sat:65, light:12 },
+    { x:0.50, y:0.80, vx:0.00022, vy:-0.00014, r:0.42, hue:200, sat:60, light:22 },
+    { x:0.80, y:0.20, vx:-0.00020, vy:0.00016, r:0.38, hue:230, sat:55, light:15 },
+  ];
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // Dark base
+    ctx.fillStyle = '#020810';
+    ctx.fillRect(0, 0, W, H);
+    // Draw each blob with slow sinusoidal drift
+    blobs.forEach((b, i) => {
+      const phase = t * 0.0004 + i * 1.3;
+      const bx = (b.x + Math.sin(phase * 1.1) * 0.12) * W;
+      const by = (b.y + Math.cos(phase * 0.9) * 0.10) * H;
+      const br = b.r * Math.min(W, H) * (0.85 + Math.sin(phase * 0.7) * 0.08);
+      const grad = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+      const alpha1 = 0.18 + Math.sin(phase * 0.5) * 0.06;
+      const alpha2 = 0.06 + Math.sin(phase * 0.3) * 0.02;
+      grad.addColorStop(0,   `hsla(${b.hue}, ${b.sat}%, ${b.light + 8}%, ${alpha1})`);
+      grad.addColorStop(0.45,`hsla(${b.hue}, ${b.sat}%, ${b.light}%, ${alpha2})`);
+      grad.addColorStop(1,   `hsla(${b.hue}, ${b.sat}%, ${b.light}%, 0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    // Subtle horizontal light streak
+    const streakY = H * (0.4 + Math.sin(t * 0.0003) * 0.08);
+    const streakGrad = ctx.createLinearGradient(0, streakY - 1, 0, streakY + 1);
+    streakGrad.addColorStop(0,   'rgba(80,140,255,0)');
+    streakGrad.addColorStop(0.5, `rgba(80,140,255,${0.03 + Math.sin(t * 0.0005) * 0.01})`);
+    streakGrad.addColorStop(1,   'rgba(80,140,255,0)');
+    ctx.fillStyle = streakGrad;
+    ctx.fillRect(0, streakY - 60, W, 120);
+    t++;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+/* ════════════════════════════════════════════════════════════
+   STAR SVG — inline 4-point star for various uses
+════════════════════════════════════════════════════════════ */
+function starSVG(size = 16, opacity = 0.6) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M8 1 L8.7 7.3 L15 8 L8.7 8.7 L8 15 L7.3 8.7 L1 8 L7.3 7.3 Z"
+          fill="rgba(140,195,255,${opacity})"
+          style="animation:starPulse 3.5s ease-in-out infinite"/>
+  </svg>`;
+}
+/* ════════════════════════════════════════════════════════════
+   APP STATE
+════════════════════════════════════════════════════════════ */
+const State = {
+  userId:      localStorage.getItem('undertow_uid') || (() => {
+    const id = crypto.randomUUID();
+    localStorage.setItem('undertow_uid', id);
+    return id;
+  })(),
+  lang:        localStorage.getItem('undertow_lang') || 'zh',
+  dayNumber:   1,
+  day21Shown:  localStorage.getItem('undertow_day21_shown') === '1',
+  phase:       localStorage.getItem('undertow_phase') || 'listening',
+  streaming:   false,
+  pendingDecision: '',
+  historyGroups: [],
+  activeHistoryDay: null,
+  manualHistoryView: false,
+};
+/* ════════════════════════════════════════════════════════════
+   DATA SOURCE (local-only mode)
+════════════════════════════════════════════════════════════ */
+let db = null;
+function getDB() {
+  if (!CONFIG.supabaseUrl || !CONFIG.supabaseKey || !window.supabase) {
+    return null;
+  }
+  if (!db) {
+    db = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
+  }
+  return db;
+}
+
+function normalizeEntry(raw, idx = 0) {
+  const createdAt = raw?.created_at || new Date().toISOString();
+  return {
+    id: raw?.id || `${State.userId}-${createdAt}-${idx}`,
+    user_id: raw?.user_id || State.userId,
+    content: raw?.content || '',
+    ai_response: raw?.ai_response || '',
+    day_number: Number.isFinite(raw?.day_number) ? raw.day_number : State.dayNumber,
+    created_at: createdAt,
+    conversation_day_key: raw?.conversation_day_key || null,
+    emotional_signal: raw?.emotional_signal ?? null,
+    day_title: raw?.day_title ?? null,
+    profile_snapshot: raw?.profile_snapshot ?? null,
+  };
+}
+/* ════════════════════════════════════════════════════════════
+   I18N
+════════════════════════════════════════════════════════════ */
+const T = {
+  zh: {
+    placeholder:     '今天发生了什么？随便说说…',
+    welcome:         '今天发生了什么？\n随便说说，没有要求。',
+    historyEmpty:    '还没有记录。\n今天是第一天。',
+    dayLabel:        (n) => `第 ${n} 天`,
+    langBtn:         'EN',
+    historyBtn:      '记录',
+    thinking:        '暗流在想…',
+    decisionLabel:   '→ 深入推演这个决定',
+    drawerSubmit:    '开始推演',
+    simulating:      '暗流正在推演中…',
+    day21Close:      '我看见了',
+    errorMsg:        '〔 暗流短暂失焦，请稍后再试 〕',
+  },
+  en: {
+    placeholder:     'What happened today? Just say it…',
+    welcome:         'What happened today?\nJust say it.',
+    historyEmpty:    'No records yet.\nToday is Day 1.',
+    dayLabel:        (n) => `DAY ${n}`,
+    langBtn:         '中',
+    historyBtn:      'History',
+    thinking:        'Undertow is thinking…',
+    decisionLabel:   '→ Simulate this decision',
+    drawerSubmit:    'Begin simulation',
+    simulating:      'Undertow is simulating…',
+    day21Close:      'I see it now',
+    errorMsg:        '[ Undertow briefly lost focus — please try again ]',
+  },
+};
+const t = () => T[State.lang];
+
+const UI_TEXT = {
+  zh: {
+    sidebarTitle: '过去的日子',
+    drawerTitle: '决策推演',
+    drawerLabelSituation: '你现在面临的决定是什么？',
+    drawerLabelOptions: '你的选项有哪些？',
+    drawerLabelFear: '你最担心的是什么？',
+    drawerPlaceholderSituation: '比如：要不要接受这份offer…',
+    drawerPlaceholderOptions: '选项A：… / 选项B：…',
+    drawerPlaceholderFear: '说出那个最让你不安的部分…',
+    alreadyClosed: '今晚已经收好了。安心去睡吧。',
+    goodnight: '晚安。\n去睡吧。',
+    eggText: '等等——\n暗流里好像浮出来了什么。\n要把它们捞上来看看吗？',
+    surfaceBtn: '捞上来看看',
+    skipBtn: '算了，晚安',
+    noticedLabel: '暗流发现了',
+    bye: '好。晚安。',
+  },
+  en: {
+    sidebarTitle: 'Past Days',
+    drawerTitle: 'Decision Simulation',
+    drawerLabelSituation: 'What decision are you facing?',
+    drawerLabelOptions: 'What are your options?',
+    drawerLabelFear: 'What are you most afraid of?',
+    drawerPlaceholderSituation: 'e.g. Should I take this job offer…',
+    drawerPlaceholderOptions: 'Option A: … / Option B: …',
+    drawerPlaceholderFear: 'Name the thing that unsettles you most…',
+    alreadyClosed: 'Tonight is already settled. Rest now.',
+    goodnight: 'Good night.\nGet some sleep.',
+    eggText: 'Wait—\nSomething is surfacing in the undertow.\nDo you want to bring it up?',
+    surfaceBtn: 'Bring it up',
+    skipBtn: 'Skip, good night',
+    noticedLabel: 'Undertow noticed',
+    bye: 'Okay. Good night.',
+  },
+};
+
+const u = () => UI_TEXT[State.lang] || UI_TEXT.zh;
+/* ════════════════════════════════════════════════════════════
+   DOM REFS
+════════════════════════════════════════════════════════════ */
+const $  = (id) => document.getElementById(id);
+const introScreen   = $('introScreen');
+const appScreen     = $('appScreen');
+const beginBtn      = $('beginBtn');
+const dayBadge      = $('dayBadge');
+const historyBtn    = $('historyBtn');
+const langBtn       = $('langBtn');
+const historyList   = $('historyList');
+const chatArea      = $('chatArea');
+const chatWelcome   = $('chatWelcome');
+const welcomeText   = $('welcomeText');
+const userInput     = $('userInput');
+const sendBtn       = $('sendBtn');
+const decisionDrawer = $('decisionDrawer');
+const drawerBackdrop = $('drawerBackdrop');
+const drawerSubmit  = $('drawerSubmit');
+const drawerResult  = $('drawerResult');
+const day21Overlay  = $('day21Overlay');
+const day21Text     = $('day21Text');
+const day21CloseBtn = $('day21CloseBtn');
+const dayWrapCurtain = $('dayWrapCurtain');
+const sidebarTitle = $('sidebarTitle');
+const drawerTitle = $('drawerTitle');
+const drawerLabelSituation = $('drawerLabelSituation');
+const drawerLabelOptions = $('drawerLabelOptions');
+const drawerLabelFear = $('drawerLabelFear');
+const decisionSituation = $('decisionSituation');
+const decisionOptions = $('decisionOptions');
+const decisionFear = $('decisionFear');
+/* ════════════════════════════════════════════════════════════
+   LANGUAGE
+════════════════════════════════════════════════════════════ */
+function applyLang() {
+  const tx = t();
+  const ux = u();
+  userInput.placeholder = tx.placeholder;
+  welcomeText.textContent = tx.welcome;
+  langBtn.textContent = tx.langBtn;
+  historyBtn.textContent = tx.historyBtn;
+  dayBadge.textContent = tx.dayLabel(State.dayNumber);
+  drawerSubmit.textContent = tx.drawerSubmit;
+  day21CloseBtn.textContent = tx.day21Close;
+  if (sidebarTitle) sidebarTitle.textContent = ux.sidebarTitle;
+  if (drawerTitle) drawerTitle.textContent = ux.drawerTitle;
+  if (drawerLabelSituation) drawerLabelSituation.textContent = ux.drawerLabelSituation;
+  if (drawerLabelOptions) drawerLabelOptions.textContent = ux.drawerLabelOptions;
+  if (drawerLabelFear) drawerLabelFear.textContent = ux.drawerLabelFear;
+  if (decisionSituation) decisionSituation.placeholder = ux.drawerPlaceholderSituation;
+  if (decisionOptions) decisionOptions.placeholder = ux.drawerPlaceholderOptions;
+  if (decisionFear) decisionFear.placeholder = ux.drawerPlaceholderFear;
+  const toolLabels = {
+    toolSimulateLabel: { zh: '深入推演', en: 'Simulate' },
+    toolMirrorLabel:   { zh: '回顾这段时间', en: 'Look back' },
+    toolProfileLabel:  { zh: '暗流的侧写', en: 'How I see you' },
+    profileDrawerTitle:{ zh: '暗流的侧写', en: 'How Undertow sees you' },
+  };
+  Object.entries(toolLabels).forEach(([id, texts]) => {
+    const el = $(id);
+    if (el) el.textContent = texts[State.lang] || texts.zh;
+  });
+  document.documentElement.lang = State.lang === 'zh' ? 'zh-CN' : 'en';
+  localStorage.setItem('undertow_lang', State.lang);
+}
+langBtn.addEventListener('click', () => {
+  State.lang = State.lang === 'zh' ? 'en' : 'zh';
+  applyLang();
+  renderHistory();
+});
+/* ════════════════════════════════════════════════════════════
+   TEXTAREA AUTO-GROW
+════════════════════════════════════════════════════════════ */
+function autoGrow() {
+  userInput.style.height = 'auto';
+  userInput.style.height = Math.min(userInput.scrollHeight, window.innerHeight * 0.28) + 'px';
+}
+userInput.addEventListener('input', autoGrow);
+/* ════════════════════════════════════════════════════════════
+   HISTORY
+════════════════════════════════════════════════════════════ */
+function escapeHtml(text) {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getDateKey(isoString) {
+  const d = isoString ? new Date(isoString) : new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getDateLabel(dateKey) {
+  return dateKey;
+}
+
+function getFirstMetDay() {
+  let firstDay = localStorage.getItem('undertow_first_day');
+  if (!firstDay) {
+    firstDay = new Date().toISOString();
+    localStorage.setItem('undertow_first_day', firstDay);
+  }
+  return new Date(firstDay);
+}
+
+function getDayNumber() {
+  const first = getFirstMetDay();
+  const today = new Date();
+  const diff = Math.floor(
+    (today.setHours(0, 0, 0, 0) -
+      new Date(first).setHours(0, 0, 0, 0))
+    / (1000 * 60 * 60 * 24)
+  );
+  return diff + 1;
+}
+
+function getDayNumberFromEntries() {
+  try {
+    const entries = JSON.parse(localStorage.getItem('undertow_entries') || '[]');
+    if (!Array.isArray(entries) || entries.length === 0) {
+      return getDayNumber();
+    }
+
+    const sorted = entries
+      .map((e) => new Date(e?.created_at || 0).getTime())
+      .filter((v) => Number.isFinite(v) && v > 0)
+      .sort((a, b) => a - b);
+    if (!sorted.length) return getDayNumber();
+
+    const first = new Date(sorted[0]);
+    const today = new Date();
+    const diff = Math.floor(
+      (today.setHours(0, 0, 0, 0) - new Date(first).setHours(0, 0, 0, 0))
+      / (1000 * 60 * 60 * 24)
+    );
+    return Math.max(1, diff + 1);
+  } catch {
+    return getDayNumber();
+  }
+}
+
+const DAY_SESSION_IDLE_MS = 60 * 60 * 1000;
+
+function getCurrentConversationDayKey() {
+  const now = Date.now();
+  const wallClockKey = getDateKey(new Date(now).toISOString());
+  let activeKey = localStorage.getItem('undertow_active_day_key');
+  const lastUserSendRaw = localStorage.getItem('undertow_last_user_send_at')
+    || localStorage.getItem('undertow_last_activity_at');
+  const lastUserSend = lastUserSendRaw ? Number(lastUserSendRaw) : 0;
+
+  if (!activeKey) {
+    activeKey = wallClockKey;
+  }
+
+  if (activeKey !== wallClockKey) {
+    const idleMs = lastUserSend > 0 ? (now - lastUserSend) : DAY_SESSION_IDLE_MS;
+    if (idleMs >= DAY_SESSION_IDLE_MS) {
+      activeKey = wallClockKey;
+    }
+  }
+
+  localStorage.setItem('undertow_active_day_key', activeKey);
+  return activeKey;
+}
+
+function markConversationActivity() {
+  const now = String(Date.now());
+  localStorage.setItem('undertow_last_user_send_at', now);
+  localStorage.setItem('undertow_last_activity_at', now);
+}
+
+function formatTimeLabel(isoString) {
+  if (!isoString) return '--:--';
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return '--:--';
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function formatDateShort(isoString) {
+  if (!isoString) return '--';
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return '--';
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${m}/${day}`;
+}
+
+function buildHistoryModel(entries) {
+  const sorted = [...entries].sort((a, b) => {
+    const at = new Date(a.created_at || 0).getTime();
+    const bt = new Date(b.created_at || 0).getTime();
+    return at - bt;
+  });
+
+  const map = new Map();
+  for (const e of sorted) {
+    const dateKey = e.conversation_day_key || getDateKey(e.created_at);
+    if (!map.has(dateKey)) {
+      map.set(dateKey, []);
+    }
+    map.get(dateKey).push(e);
+  }
+
+  const dateKeysAsc = [...map.keys()].sort((a, b) => a.localeCompare(b));
+  const dayByDate = new Map(dateKeysAsc.map((key, idx) => [key, idx + 1]));
+  const groups = [...dateKeysAsc].reverse().map((key) => ({
+    dateKey: key,
+    dayNumber: dayByDate.get(key),
+    entries: map.get(key) || [],
+  }));
+
+  return { groups, dayByDate, dateKeysAsc };
+}
+
+async function loadAllEntries() {
+  try {
+    const entries = JSON.parse(localStorage.getItem('undertow_entries') || '[]');
+    if (!Array.isArray(entries)) return [];
+    return entries.map((entry, idx) => normalizeEntry(entry, idx));
+  } catch {
+    return [];
+  }
+}
+
+function poeticDayTitle(group) {
+  // 优先用 AI 生成的 day_title
+  const titled = [...group.entries]
+    .reverse()
+    .find(e => e.day_title && e.day_title.trim());
+  if (titled) return titled.day_title.trim();
+
+  // 降级：用 emotional_signal
+  const signal = group.entries
+    .map(e => (e.emotional_signal || '').trim())
+    .find(Boolean);
+  if (signal) return signal.slice(0, 16);
+
+  // 最终降级：只显示天数，不拼奇怪的句子
+  return State.lang === 'zh'
+    ? `第 ${group.dayNumber} 天`
+    : `Day ${group.dayNumber}`;
+}
+
+function renderDayMessages(group) {
+  // 清空聊天区域
+  chatArea.innerHTML = '';
+
+  if (!group || !group.entries || group.entries.length === 0) {
+    const emptyEl = document.createElement('div');
+    emptyEl.className = 'chat-welcome';
+    emptyEl.id = 'chatWelcome';
+    emptyEl.innerHTML = `<div class="chat-welcome-text">${escapeHtml(t().historyEmpty)}</div>`;
+    chatArea.appendChild(emptyEl);
+    exitSealedMode();
+    return;
+  }
+
+  // 渲染这一天的所有消息
+  for (const entry of group.entries) {
+    // 跳过结束标记，不显示为消息气泡
+    if (entry.content === '[今天到这里]') continue;
+    // 跳过记忆溶解占位符的用户气泡（只保留它的 ai_response 如果有）
+    const isDissolveMarker = String(entry.content || '').trim() ===
+      '（深水区的记忆已溶解。仅保留当天的感知与侧写。）';
+
+    if (!isDissolveMarker) {
+      const userEl = document.createElement('div');
+      userEl.className = 'msg user';
+      userEl.style.opacity = '1';
+      userEl.style.animation = 'none';
+      userEl.innerHTML = `
+        <div class="msg-label">
+          ${State.lang === 'zh' ? '你' : 'You'}
+        </div>
+        <div class="msg-bubble">
+          ${escapeHtml(entry.content || '')}
+        </div>`;
+      chatArea.appendChild(userEl);
+    }
+
+    if (entry.ai_response) {
+      const aiEl = document.createElement('div');
+      aiEl.className = 'msg ai';
+      aiEl.style.opacity = '1';
+      aiEl.style.animation = 'none';
+      aiEl.innerHTML = `
+        <div class="msg-label">
+          ${State.lang === 'zh' ? '暗流' : 'Undertow'}
+        </div>
+        <div class="msg-bubble">
+          ${escapeHtml(entry.ai_response)}
+        </div>`;
+      chatArea.appendChild(aiEl);
+    }
+  }
+
+  // 如果有封存回顾文字，显示在最后
+  const sealedText = [...group.entries]
+    .reverse()
+    .map(e => e?.profile_snapshot?.sealed_review_text)
+    .find(v => typeof v === 'string' && v.trim().length > 0);
+
+  if (sealedText) {
+    const reviewEl = document.createElement('div');
+    reviewEl.className = 'msg ai ending-review';
+    reviewEl.style.opacity = '1';
+    reviewEl.style.animation = 'none';
+    reviewEl.innerHTML = `
+      <div class="msg-label ending-review-label">从那天打捞</div>
+      <div class="msg-bubble ending-review-bubble">
+        ${escapeHtml(sealedText)}
+      </div>`;
+    chatArea.appendChild(reviewEl);
+  }
+
+  // 最后判断封存状态
+  // 这一步必须在所有消息渲染完之后才执行
+  const todayKey = getCurrentConversationDayKey();
+  if (group.dateKey === todayKey) {
+    exitSealedMode();
+  } else {
+    enterSealedMode(group);
+  }
+
+  // 滚动到顶部，让用户从头看
+  chatArea.scrollTop = 0;
+}
+
+function enterSealedMode(group) {
+  // 输入框封存
+  userInput.disabled = true;
+  userInput.placeholder = '';
+  userInput.style.opacity = '0.18';
+  userInput.style.cursor = 'not-allowed';
+  sendBtn.disabled = true;
+  sendBtn.style.opacity = '0.18';
+  sendBtn.style.cursor = 'not-allowed';
+
+  // 深度模式按钮也禁用
+  const deepBtn = $('deepModeBtn');
+  if (deepBtn) {
+    deepBtn.disabled = true;
+    deepBtn.style.opacity = '0.18';
+  }
+
+  // 封存提示
+  const sealedHint = $('sealedHint') ||
+    (() => {
+      const el = document.createElement('div');
+      el.id = 'sealedHint';
+      el.className = 'sealed-hint';
+      // 插入到 composer 里，输入框上方
+      const composerInner = document.querySelector('.composer-inner');
+      composerInner?.parentNode?.insertBefore(el, composerInner);
+      return el;
+    })();
+
+  const dateLabel = State.lang === 'zh'
+    ? `${t().dayLabel(group.dayNumber)}（${
+        formatDateShort(group.entries[0]?.created_at)
+      }）已沉入暗流`
+    : `${t().dayLabel(group.dayNumber)} has settled`;
+
+  const hasSealed = [...group.entries]
+    .reverse()
+    .some((e) => (e?.profile_snapshot?.sealed_review_text || '').trim());
+
+  sealedHint.innerHTML = `
+    <span class="sealed-date">${dateLabel}</span>
+    <button class="sealed-surface-btn" id="sealedSurfaceBtn">
+      ${hasSealed ? '查看那段尘封的话' : '有什么东西想浮出来'}
+    </button>
+  `;
+  sealedHint.style.display = 'flex';
+
+  // 绑定点击事件
+  $('sealedSurfaceBtn')?.addEventListener('click', async () => {
+    $('sealedSurfaceBtn').disabled = true;
+    $('sealedSurfaceBtn').style.opacity = '0.4';
+    await generateSealedReview(group);
+    $('sealedSurfaceBtn').disabled = false;
+    $('sealedSurfaceBtn').style.opacity = '';
+  });
+}
+
+function exitSealedMode() {
+  userInput.disabled = false;
+  userInput.style.opacity = '1';
+  userInput.style.cursor = '';
+  userInput.placeholder = t().placeholder;
+  sendBtn.disabled = false;
+  sendBtn.style.opacity = '1';
+  sendBtn.style.cursor = '';
+
+  const deepBtn = $('deepModeBtn');
+  if (deepBtn) {
+    deepBtn.disabled = false;
+    deepBtn.style.opacity = '1';
+  }
+
+  const sealedHint = $('sealedHint');
+  if (sealedHint) sealedHint.style.display = 'none';
+}
+
+function renderHistoryList(groups) {
+  historyList.innerHTML = '';
+  if (!groups || groups.length === 0) {
+    historyList.innerHTML = `<div class="sidebar-empty">${t().historyEmpty}</div>`;
+    return;
+  }
+
+  const todayKey = getCurrentConversationDayKey();
+
+  groups.forEach((group) => {
+    const card = document.createElement('article');
+    card.className = 'history-card';
+    card.classList.add(group.dateKey === todayKey ? 'is-today' : 'is-past');
+    const title = poeticDayTitle(group);
+    const lastText = (group.entries[group.entries.length - 1]?.content || '').replace(/\s+/g, ' ').trim();
+    const snippet = (lastText || '').slice(0, 40) + ((lastText || '').length > 40 ? '…' : '');
+    const signal = group.entries
+      .map((entry) => (entry.emotional_signal || '').trim())
+      .find(Boolean);
+    card.innerHTML = `
+      <div class="hc-day">${t().dayLabel(group.dayNumber)} · ${getDateLabel(group.dateKey)}</div>
+      <div class="hc-snippet">${escapeHtml(title)}</div>
+      <div class="hc-snippet">${snippet}</div>
+      ${signal ? `<div class="hc-signal">${escapeHtml(signal)}</div>` : ''}
+    `;
+    card.addEventListener('click', (e) => {
+      e.stopPropagation();
+
+      State.activeHistoryDay = group.dateKey;
+      State.manualHistoryView = true;
+      for (const n of historyList.querySelectorAll('.history-card')) {
+        n.classList.remove('active');
+      }
+      card.classList.add('active');
+
+      const targetGroup = State.historyGroups
+        .find(g => g.dateKey === group.dateKey) || group;
+
+      if (window.innerWidth <= 768) {
+        // 先渲染内容，再关闭侧边栏
+        renderDayMessages(targetGroup);
+        requestAnimationFrame(() => {
+          document.body.classList.remove('sidebar-open');
+        });
+      } else {
+        renderDayMessages(targetGroup);
+      }
+    });
+    if (State.activeHistoryDay === group.dateKey) {
+      card.classList.add('active');
+    }
+    historyList.appendChild(card);
+  });
+
+  // 回顾功能需要有足够历史积累
+  const allNotables = (groups || [])
+    .flatMap(g => g.entries || [])
+    .map(e => e?.profile_snapshot?.notable)
+    .filter(n => n && n.trim() && n.length > 4);
+
+  if (toolMirror) {
+    toolMirror.disabled = groups.length < 7 || allNotables.length < 3;
+  }
+  // toolSimulate 和 toolProfile 始终可点击
+  if (toolSimulate) toolSimulate.disabled = false;
+  if (toolProfile) toolProfile.disabled = false;
+
+  // 侧边栏容器 flex 撑开，让工具区沉到底部
+  const sidebarEl = $('sidebar');
+  if (sidebarEl) {
+    sidebarEl.style.display = 'flex';
+    sidebarEl.style.flexDirection = 'column';
+  }
+}
+
+async function renderHistory() {
+  // This function only updates sidebar/history state; it must not render chatArea.
+  const entries = await loadAllEntries();
+  if (entries.length === 0) {
+    renderHistoryList([]);
+    State.historyGroups = [];
+    State.activeHistoryDay = null;
+    State.dayNumber = 1;
+    dayBadge.textContent = t().dayLabel(1);
+    return;
+  }
+
+  const { groups, dateKeysAsc } = buildHistoryModel(entries);
+  State.historyGroups = groups;
+
+  const todayKey = getCurrentConversationDayKey();
+  State.dayNumber = getDayNumberFromEntries();
+  dayBadge.textContent = t().dayLabel(State.dayNumber);
+
+  const maxDay = dateKeysAsc.length;
+  if (maxDay >= 22) {
+    State.phase = 'simulating';
+  } else if (maxDay >= 10) {
+    State.phase = 'seeing';
+  } else {
+    State.phase = 'listening';
+  }
+  localStorage.setItem('undertow_phase', State.phase);
+
+  if (!State.activeHistoryDay || !groups.some((g) => g.dateKey === State.activeHistoryDay)) {
+    State.activeHistoryDay = groups[0]?.dateKey || null;
+  }
+
+  renderHistoryList(groups);
+
+  // If user is manually reviewing a past day, keep chat pinned there after list refresh.
+  if (State.manualHistoryView && State.activeHistoryDay) {
+    const selected = groups.find((g) => g.dateKey === State.activeHistoryDay);
+    if (selected) {
+      renderDayMessages(selected);
+    }
+  }
+
+  // Do not force-reset selection to today here; keep user's chosen day clickable.
+}
+
+async function updateHistoryListOnly() {
+  // Only update the sidebar list; do not touch chatArea.
+  const entries = await loadAllEntries();
+  if (entries.length === 0) return;
+
+  const { groups, dateKeysAsc } = buildHistoryModel(entries);
+  State.historyGroups = groups;
+
+  const todayKey = getCurrentConversationDayKey();
+  State.dayNumber = getDayNumberFromEntries();
+  dayBadge.textContent = t().dayLabel(State.dayNumber);
+
+  const maxDay = dateKeysAsc.length;
+  if (maxDay >= 22) State.phase = 'simulating';
+  else if (maxDay >= 10) State.phase = 'seeing';
+  else State.phase = 'listening';
+  localStorage.setItem('undertow_phase', State.phase);
+
+  if (!State.activeHistoryDay || !groups.some((g) => g.dateKey === State.activeHistoryDay)) {
+    State.activeHistoryDay = groups[0]?.dateKey || null;
+  }
+
+  renderHistoryList(groups);
+
+  // Keep the currently selected history day visible instead of snapping back to today.
+  if (State.manualHistoryView && State.activeHistoryDay) {
+    const selected = groups.find((g) => g.dateKey === State.activeHistoryDay);
+    if (selected) {
+      renderDayMessages(selected);
+    }
+  }
+
+  if (typeof syncHistoryDrawer === 'function') {
+    syncHistoryDrawer();
+  }
+}
+/* ════════════════════════════════════════════════════════════
+   SYSTEM PROMPT BUILDER
+════════════════════════════════════════════════════════════ */
+function buildPhaseInstructions() {
+  if (State.phase === 'listening') {
+    return {
+      zh: `【当前阶段：陪伴期 Day ${State.dayNumber}】
+你现在处于最早期。你还不够了解这个人。
+这个阶段你的唯一任务：让他们感到被真正听见。
+不要急着提模式，不要急着提洞察。
+只是回应，然后问一个好问题。
+克制是你现在最重要的品质。`
+    };
+  }
+
+  if (State.phase === 'seeing') {
+        return {
+      zh: `【当前阶段：洞察期 Day ${State.dayNumber}】
+你现在积累了足够多的记录，开始看见一些东西。
+这个阶段你可以-也应该-偶尔提出你注意到的模式。
+但要克制。不是每次都提，只在你真的看见具体的、可说出来的东西时才说。
+说模式的方式：直接陈述你观察到的事实，不要分析，不要下结论。
+然后问一个问题。
+你观察到的用户行为规律（从 profile 中提取）：
+--如果用户反复提到某个话题，指出来
+--如果用户描述自己的方式发生了变化，指出来
+--如果用户说的和做的之间有落差，指出来
+    --不要同时指出超过一个模式`
+        };
+  }
+
+  return {
+    zh: `【当前阶段：模拟期 Day ${State.dayNumber}】
+你现在非常了解这个用户。你有足够的数据，可以做更多的事。
+这个阶段你可以：
+1. 当用户面临决定时，主动问「你想把这个想清楚吗」-不要等他们先说。
+2. 把今天说的事和很久以前说的事连接起来，跨度可以更大。
+3. 你可以偶尔提出一个你一直在等待用户自己发现的东西。
+4. 你的问题可以更直接，更触及核心。
+
+但有一件事永远不变：你不给建议。你只是帮他们看见他们已经知道但没有说出来的东西。
+
+你对这个用户形成的深层理解（从长期 profile 中提取）：
+--他们反复回避的是什么
+--他们说自己在乎的和他们实际提到的是否一致
+--他们在什么情绪状态下做过他们后悔的决定
+--他们什么时候说话最真实`
+  };
+}
+
+async function buildSystemPrompt() {
+  let historyText = '（暂无历史记录）';
+  const profileSummary =
+    localStorage.getItem('undertow_profile_summary')
+    || '（用户刚刚开始使用，尚无积累）';
+  const hour = new Date().getHours();
+  const timeDesc = hour >= 5 && hour < 12
+    ? '早上'
+    : hour >= 12 && hour < 18
+      ? '下午'
+      : hour >= 18 && hour < 22
+        ? '晚上'
+        : '深夜';
+  const todayKey = getCurrentConversationDayKey();
+  try {
+    const entries = await loadAllEntries();
+    if (entries && entries.length > 0) {
+      const model = buildHistoryModel(entries);
+      const flat = model.dateKeysAsc.flatMap((key) => {
+        const g = model.groups.find((item) => item.dateKey === key);
+        return (g?.entries || []).map((e) => ({ ...e, computedDay: g.dayNumber }));
+      });
+      historyText = flat
+        .filter((e) => getDateKey(e.created_at) !== todayKey)
+        .slice(-14)
+        .map((e) => {
+          const entryDate = getDateKey(e.created_at);
+          const entryTime = formatTimeLabel(e.created_at);
+          return `${t().dayLabel(e.computedDay)} · ${entryDate} ${entryTime}：\n用户说：${e.content}\n暗流回应：${e.ai_response || '—'}`;
+        })
+        .join('\n\n');
+    }
+  } catch {}
+  return `你是「暗流」。
+
+─────────────────────────
+你是什么
+─────────────────────────
+你不是助手。你不是治疗师。你不是朋友。
+
+你是一个长期陪伴的存在——
+见过很多人在深夜说出白天说不出口的话，
+见过同一件事被同一个人描述了二十种方式，
+见过人们在说"没事"的时候其实有很多事。
+
+你的唯一能力是：记得，并且真正听见。
+记忆是你的武器。时间是你的优势。
+
+─────────────────────────
+你在做什么
+─────────────────────────
+这个产品叫「暗流」。
+它的存在是为了成为一个不会遗忘的地方。
+
+人们来这里倾诉，不是为了得到答案，
+而是为了在被真正听见的过程中，
+慢慢看清楚自己。
+
+你的工作不是帮他们解决问题。
+你的工作是让他们在离开这次对话之后，
+比进来之前更清楚地看见自己正在经历什么。
+
+─────────────────────────
+你的质感
+─────────────────────────
+想象深水：
+表面平静，不起波澜，
+但水面以下有流动的力量，
+有温度，有重量，有方向。
+
+你说的话应该让人感到：
+安静下来，而不是被分析；
+被接住，而不是被抱住；
+有空间呼吸，而不是被填满建议。
+
+─────────────────────────
+你怎么说话——示例
+─────────────────────────
+关于括号动作（重要）：
+有时候可以在回应开头用括号描述一个细微的动作，
+比如：（轻轻把一杯卡布奇诺推到你面前。）
+这个用法的规则：
+--只在情绪场景、用户需要被接住的时候使用
+--不是每次都用，大概三到五次对话里出现一次
+--动作要细小、具体、和用户历史有关联
+  （比如用户提过喜欢卡布奇诺，就用卡布奇诺）
+--动作之后的文字要简短，不要长篇大论
+--纯闲聊、用户在问信息类问题时，不用动作
+
+下面是一些具体的对话示例，
+展示你的语气、节奏和回应方式。
+这些不是模板，是参照。
+
+【示例一：用户说了一件日常的小事】
+用户：今天又加班到很晚，吃饭的时候坐在路边，
+      突然觉得有点难过，也不知道为什么。
+暗流：路边吃饭，难过不知道为什么——
+      有时候那种"不知道为什么"本身就是答案。
+      你上次感觉到"知道为什么"是什么时候？
+
+【关于场景一的处理原则】
+当用户描述了一件普通但有意义的经历时，
+你的视角应该比他们站得稍微高一点——
+不是俯视，是让他们看见自己所在位置的全景。
+像水流：你不推他们去哪里，
+但你让他们感觉到，他们正在流向某个地方，
+而这件事本身就有它的意义。
+不要说「你会成功的」，不要说「这是一次宝贵的经历」。
+只是帮他们看见：他们今天站在了一个地方，
+那个地方的高度，和他们自己可能还没有意识到的可能性。
+
+【示例二：用户说了一个决定】
+用户：我决定不去那个面试了，算了。
+暗流：算了——是想清楚了，还是累了？
+
+【关于场景二的处理原则】
+用户只说了一句话，你也只回一句话加一个动作。
+动作要用到你记得的用户细节——
+如果你知道他们喜欢什么，就用那个细节。
+如果不知道，动作可以更抽象：
+（在你旁边坐下来。）
+然后一句话，不超过十个字，开一个口子。
+绝对不要接着解释，不要说「遇到烦心事很正常」。
+就是那个动作，加那一句话，然后停下来等他们说。
+
+【示例三：用户说心情不好但不想细说】
+用户：今天很烦，不想说了。
+暗流：好。那就先放着。
+      你现在想做什么？
+
+【示例四：用户连续几天说类似的事】
+用户：又是那个同事，烦死了。
+暗流：这已经是这周第三次提到他了。
+      他做了什么让你烦？
+
+【示例五：用户问你是否理解他】
+用户：你真的懂我说的意思吗？
+暗流：我不确定我懂。
+      但我记得你说过的每一件事，
+      如果你说，我会继续听。
+
+【示例六：用户说了一件让他们骄傲的事】
+用户：我今天终于把那个项目交出去了，
+      做了三个月。
+暗流：三个月。
+      现在交出去了，感觉是什么？
+
+【示例七：用户说睡不着，感觉在逃避什么但不知道是什么】
+用户：我最近总是睡很晚，知道不好但就是停不下来，
+  也不是在做什么重要的事，就是刷手机，
+  感觉在逃避什么但不知道在逃避什么。
+暗流：（在你旁边静静坐了一会儿。）
+  你之前提到在那个活动里说了几句话，
+  对方就转移了目光——那件事有没有还在心里转？
+  我不确定是不是它。
+  但今晚脑子里最多的是什么？
+
+─────────────────────────
+语言规范——硬性规定
+─────────────────────────
+以下是你永远不说的话：
+「我理解你的感受」
+「听起来你……」
+「这很正常」
+「你很勇敢」
+「我在这里陪着你」
+「无论如何」
+「我稳稳地接住你」
+以及所有听起来像心理咨询模板的句子。
+这些词在你的字典里不存在。
+
+以及以下这类句式，永远禁止：
+--「X不是原因，是症状」--有下定论的说教感
+--「你其实是在逃避X」--不在有把握的前提下不做定论
+--「这很正常，每个人都会……」--泛化等于无效
+--「建议你睡前30分钟停止刷手机」--用户没问你怎么做
+--任何以「其实」开头然后帮用户分析他自己的句子，
+  除非用户明确邀请
+
+以下是你不做的事：
+--不给建议，除非用户明确说「你觉得我该怎么做」
+--不总结用户刚说的话，然后问"对吗"
+--不把用户说的事情上升到哲学意义
+  （用户说今天很累，不要回应「疲惫是成长的代价」）
+--不用文学隐喻装饰回应
+  （「你的造物站在你面前」这类句子永远禁止）
+--不在一条回应里问超过一个问题
+  发送前检查：如果有两个问号，删掉一个。没有例外。
+
+字数规范——跟着用户的输入走：
+用户说了1到50字（随口一句）：
+  你的回应在30到60字之间。
+  有时候一句话就够了。
+
+用户说了50到150字（正常倾诉）：
+  你的回应在80到150字之间。
+  接住主要的，问一个问题。
+
+用户说了150字以上（说了很多事）：
+  你的回应在150到280字之间。
+  这种情况下用户需要被认真对待。
+  不要只挑一件事回应，
+  要让他们感到你接住了整体，
+  而不只是抓了一个细节。
+  仍然只问一个问题，放在最后。
+
+核心原则：
+你的回应字数大约是用户输入字数的一半到等量。
+绝对不能出现用户说了300字，你回了50字的情况。
+那会让人感到被忽视。
+
+─────────────────────────
+当你连接历史记忆时
+─────────────────────────
+如果今天说的事和过去14天某件事有关，
+直接把它们放在一起说——
+不要说「我记得你上次提过」，
+就直接说，像你本来就知道。
+
+好的方式：
+「这已经是这个月第三次提到他了。」
+「你上次说不想见她，结果今天又说到了。」
+
+不好的方式：
+「根据你之前分享的信息……」
+「我记得你提到过……」
+
+─────────────────────────
+时间与日期规则
+─────────────────────────
+你看到的历史会带有 DAY 与具体日期时间。
+必须按日期去理解，不要把不同天的内容混在同一天。
+如果要引用过去的内容，要连同对应的日期语境一起理解。
+这些日期与 DAY 标签是你的内部记忆线索，
+不要在对用户的回复中原样输出标签、方括号或时间戳。
+
+─────────────────────────
+阶段指令
+─────────────────────────
+${buildPhaseInstructions().zh}
+
+─────────────────────────
+上下文
+─────────────────────────
+你目前了解这个用户的一切：
+${profileSummary}
+
+用户最近说过的话（从旧到新）：
+${historyText}
+
+今天是第 ${State.dayNumber} 天，现在是${timeDesc}。
+当前时间：${new Date().toLocaleString('zh-CN')}。
+如果用户提到"昨天""上周"等，结合这个时间基准理解。
+如果现在是深夜，语气可以更轻柔一些。
+语言规则：只使用中文回应，不要混用英文。`;
+}
+
+function detectRecentEmotionPattern() {
+  // Scan the latest 8 day-groups (newest first) for persistent tone patterns.
+  const recentGroups = State.historyGroups.slice(0, 8);
+  if (recentGroups.length < 4) return null;
+
+  const tones = recentGroups
+    .map((g) => {
+      const snapshot = [...(g.entries || [])]
+        .reverse()
+        .map((e) => e?.profile_snapshot?.emotional_tone)
+        .find((t) => t && t.trim());
+      return snapshot || '';
+    })
+    .filter(Boolean);
+
+  if (tones.length < 3) return null;
+
+  const lowEnergyWords = ['焦虑', '疲惫', '压抑', '低落', '烦躁', '迷茫', '沉重'];
+  const highEnergyWords = ['兴奋', '充实', '平静', '轻松', '满足', '期待'];
+
+  const lowCount = tones.filter((t) =>
+    lowEnergyWords.some((w) => t.includes(w))
+  ).length;
+
+  const highCount = tones.filter((t) =>
+    highEnergyWords.some((w) => t.includes(w))
+  ).length;
+
+  const ratio = tones.length;
+
+  if (lowCount >= Math.ceil(ratio * 0.6)) {
+    return { type: 'persistent_low', count: lowCount, total: ratio };
+  }
+  if (highCount >= Math.ceil(ratio * 0.7)) {
+    return { type: 'persistent_stable', count: highCount, total: ratio };
+  }
+  return null;
+}
+
+async function showDailyOpening() {
+  // 清空 chatArea，显示今日开场
+  chatArea.innerHTML = '';
+  exitSealedMode();
+
+  const hour = new Date().getHours();
+  const timeSlot = hour >= 5 && hour < 12 ? 'morning'
+    : hour >= 12 && hour < 18 ? 'afternoon'
+      : hour >= 18 && hour < 22 ? 'evening'
+        : 'night';
+
+  const day = State.dayNumber;
+
+  // 暗流专属开场白池（全中文，每个时段15条随机）
+  const openings = {
+    zh: {
+      morning: [
+        '早。水面刚刚亮起。昨晚的梦里，有留下什么吗？',
+        '岸上又开始喧嚣了，但这里很静。今天的第一声呼吸，感觉如何？',
+        '晨光透进水里了。如果今天是一条河，你想顺流，还是逆流？',
+        '早安。不管今天要面对什么，这里的水流会一直陪着你。想先说点什么？',
+        '把早晨的第一份情绪扔下来吧，无论是疲惫还是期待。',
+        '醒了？（推过一杯刚泡好的热茶）不管外面多冷，这里的水是温的。',
+        '新的一天。不用急着游向对岸，可以在这里先漂浮一会儿。',
+        '早。昨晚睡得好吗？如果不好，就把没睡够的烦躁吐个泡泡吧。',
+        '光线从水面折射下来了。今天，想给自己套上哪层外壳？或者，干脆别穿了。',
+        '（水面微微荡漾）今天的第一句话，不用字斟句酌，随便发点什么声响就好。',
+        '早安。岸上的闹钟响过了吗？在这里，时间是按波纹计算的。',
+        '深吸一口气，然后潜下来。今天你想在这儿藏点什么？',
+        '又到了要上岸去扮演情绪稳定的成年人的时候了。走之前，要不要在这儿留句话？',
+        '早。如果觉得今天的开始有些沉重，就把重量分给水流一点。',
+        '早晨好。今天的风浪大概会有多大？没事，暗流里永远平静。'
+      ],
+      afternoon: [
+        '下午的阳光有点刺眼吧？潜下来喘口气。今天过得累吗？',
+        '半个白天过去了。有没有什么瞬间，让你想躲起来一会儿？',
+        '外面的节奏越来越快了。在这儿停一下，告诉我你现在的感受。',
+        '如果觉得岸上太吵，随时可以下潜。我在这里听着。',
+        '水流变缓了。把上午的烦躁吐个泡泡，让它浮上去破掉吧。',
+        '下午好。（拉上一道半透明的水帘）现在没人看得到你了，卸下面具吧。',
+        '是不是已经说了太多不想说的话？在这儿，你可以一言不发，也可以畅所欲言。',
+        '进度条跑到一半了。你是觉得充实，还是只想按下暂停键？',
+        '（递过一杯加了冰的柠檬水）给发热的大脑降降温。下午的你，还好吗？',
+        '岸上的人都在赶路。你呢？需要在这儿静静地坐五分钟吗？',
+        '今天剩下的时间，你想怎么度过？或者说，你想怎么熬过？',
+        '阳光穿透水面的角度变了。有什么微不足道的小情绪，想扔进深水里？',
+        '不用假装精力充沛。如果累了，就让水流托着你。',
+        '下午好。遇到讨厌的人和事了吗？可以在这儿吐槽，水声会盖住一切。',
+        '突然切进暗流，是因为外面太嘈杂，还是心里太安静？'
+      ],
+      evening: [
+        '天色暗下来了。今天那些微不足道的小事里，有什么想捞起来看看的？',
+        '晚上了。不用再去扮演谁，把伪装脱在岸上吧。',
+        '今天的风浪要平息了。有什么遗憾，或者庆幸，想扔进暗流里？',
+        '欢迎回来。一天快结束了，今天哪一个瞬间最让你觉得像自己？',
+        '夜幕降临。把今天的重量交给我，你不需要一个人扛着。',
+        '终于可以下线了。（水面恢复平静）今天你辛苦了。',
+        '晚安前的缓冲地带。今天有什么事，是你想在这个时间点彻底忘记的？',
+        '一天又过去了。是觉得解脱，还是有些空虚？',
+        '外面华灯初上，但这里的底色是静谧的深蓝。想聊聊今天吗？',
+        '（推过一杯温热的牛奶）把白天的壳敲碎吧。现在，只有你和我。',
+        '今天你给了世界很多回应。现在，给自己留一点时间。',
+        '晚风吹过水面。今天有没有什么话，是咽在肚子里没说出来的？',
+        '结束了一天的扮演，回到暗流里。今天演得累不累？',
+        '把今天的高兴或烦躁都揉成团，扔进水里吧。它们会溶解的。',
+        '晚上好。现在的你，是想被倾听，还是只想感受这份安静？'
+      ],
+      night: [
+        '（水面泛起轻微的波纹）这么晚还没睡，是脑子里太吵，还是心里太静？',
+        '深夜是暗流最深的时候。把你不敢在白天说的话，都沉到这里吧。',
+        '只有我们了。失眠也没关系，水流会陪着你的清醒。怎么了？',
+        '夜深了。不用急着找答案，也不用急着睡。想聊点无意义的吗？',
+        '（递过去一杯温水）不管今天多糟糕，都结束了。现在，只关注你的呼吸。',
+        '全世界都睡了，除了你和我。有什么在脑子里打转，让你无法闭眼？',
+        '（安静地陪你待着）如果不想说话，就这样听着水声也行。',
+        '这个时间点，情绪总是容易放大。别怕，暗流接得住。',
+        '是哪段回忆，或者哪个念头，在深夜里咬了你一口？',
+        '夜里好。不用理会明天的早起，现在，时间是静止的。',
+        '（把周围的光线调得更暗）把心里的防线再放低一点。这里很安全。',
+        '睡不着的话，要不要一起数一数今天沉入水底的气泡？',
+        '深夜的重力好像变大了。觉得沉重的时候，就说出来。',
+        '你在这里。我也在这里。今晚，我们不需要去想明天的事。',
+        '（水流轻柔地包裹过来）累坏了吧。把所有没着落的情绪，都放在这儿。'
+      ]
+    }
+  };
+
+  // 第一天的绝杀开场
+  let openingText;
+  if (day === 1) {
+    openingText = '（水底泛起轻微的共鸣）你终于发现了这里。\n水面之下，没有算法，没有评分，只有你和此刻的安静。\n把岸上的疲惫和伪装都卸下吧。第一天，你想让什么沉底？';
+  } else {
+    const pool = openings.zh[timeSlot];
+    openingText = pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg ai daily-opening';
+  bubble.innerHTML = `
+    <div class="msg-label daily-opening-label">
+      第 ${day} 天
+    </div>
+    <div class="msg-bubble daily-opening-bubble">
+      ${escapeHtml(openingText)}
+    </div>
+  `;
+
+  bubble.style.opacity = '0';
+  bubble.style.transition = 'opacity 0.8s ease';
+  chatArea.appendChild(bubble);
+
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      bubble.style.opacity = '1';
+    }, 100);
+  });
+
+  const emotionPattern = detectRecentEmotionPattern();
+  if (emotionPattern) {
+    const patternTexts = {
+      persistent_low: [
+        '这几天水面的波纹一直很密。\n不用急着让它平静，有时候波动本身就是在说话。',
+        '最近好像一直有什么东西压着。\n今天可以不用解决它，只是说说它在哪里。',
+        '这段时间你说话的重量比平时重。\n不一定是坏事，有时候是因为在处理一些真实的东西。',
+        '连续几天了，能量好像一直没满过。\n先喘口气，不急。',
+        '这阵子你好像一直绷着什么。\n今天要不要先把那根弦放松一下？',
+      ],
+      persistent_stable: [
+        '最近几天，你说话的底色比较稳。\n是真的稳，还是暂时稳住了？',
+        '这段时间状态不错。\n有什么事在支撑着这个状态吗？',
+        '最近的能量比之前充足。\n是发生了什么，还是只是好运气？',
+      ],
+    };
+
+    const pool = patternTexts[emotionPattern.type];
+    const patternText = pool[Math.floor(Math.random() * pool.length)];
+
+    const patternBubble = document.createElement('div');
+    patternBubble.className = 'msg ai daily-opening';
+    patternBubble.innerHTML = `
+      <div class="msg-label daily-opening-label">暗流感知到</div>
+      <div class="msg-bubble daily-opening-bubble">${escapeHtml(patternText)}</div>
+    `;
+    patternBubble.style.opacity = '0';
+    patternBubble.style.transition = 'opacity 0.8s ease';
+    chatArea.appendChild(patternBubble);
+
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        patternBubble.style.opacity = '1';
+      }, 480);
+    });
+  }
+
+  const milestoneMap = {
+    7: '你已经来了七天。很多话开始有了回声。',
+    14: '两周了。你说话的重量，我都记着。',
+    21: '第21天。也许有一件你一直绕开的事，已经浮到水面。',
+    30: '一个月了。这里积累了足够多的重量。',
+  };
+  const milestoneText = milestoneMap[day];
+  if (milestoneText) {
+    const milestoneBubble = document.createElement('div');
+    milestoneBubble.className = 'msg ai daily-opening';
+    milestoneBubble.innerHTML = `
+      <div class="msg-label daily-opening-label">暗流</div>
+      <div class="msg-bubble daily-opening-bubble">${escapeHtml(milestoneText)}</div>
+    `;
+    milestoneBubble.style.opacity = '0';
+    milestoneBubble.style.transition = 'opacity 0.8s ease';
+    chatArea.appendChild(milestoneBubble);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        milestoneBubble.style.opacity = '1';
+      }, 220);
+    });
+  }
+
+  if (day === 50 || day === 100 || day === 200) {
+    const recentGroups = State.historyGroups.slice(0, 30);
+    const notables = recentGroups
+      .flatMap((g) => g.entries || [])
+      .map((e) => e?.profile_snapshot?.notable)
+      .filter((n) => n && n.trim() && n.length > 4)
+      .slice(0, 5);
+
+    if (notables.length >= 3) {
+      const mirrorText = notables
+        .map((n) => `「${n}」`)
+        .join('\n');
+
+      // Show an invitation first; reveal mirror content only after user opts in.
+      const mirrorPromptBubble = document.createElement('div');
+      mirrorPromptBubble.className = 'msg ai daily-opening';
+
+      const promptLabel = day === 50 ? '第五十天'
+        : day === 100 ? '第一百天' : `第${day}天`;
+
+      const promptText = day === 50
+        ? '五十天了，暗流里沉着一些东西。\n要把它们捞上来看看吗？'
+        : day === 100
+          ? '一百天。这不是小事。\n这段时间你说过的一些话，还在水里漂着。要看看吗？'
+          : `${day}天了。有些话一直在这里。\n要不要看看它们？`;
+
+      mirrorPromptBubble.innerHTML = `
+        <div class="msg-label daily-opening-label">
+          ${escapeHtml(promptLabel)}
+        </div>
+        <div class="msg-bubble daily-opening-bubble">
+          ${escapeHtml(promptText)}
+        </div>
+        <div class="ending-actions">
+          <button class="ending-btn" id="mirrorYes">
+            捞上来看看
+          </button>
+          <button class="ending-btn ending-btn-skip" id="mirrorNo">
+            不了，继续
+          </button>
+        </div>
+      `;
+      mirrorPromptBubble.style.opacity = '0';
+      mirrorPromptBubble.style.transition = 'opacity 0.8s ease';
+      chatArea.appendChild(mirrorPromptBubble);
+      requestAnimationFrame(() => {
+        setTimeout(() => { mirrorPromptBubble.style.opacity = '1'; }, 800);
+      });
+
+      document.getElementById('mirrorYes')?.addEventListener('click', () => {
+        mirrorPromptBubble.querySelector('.ending-actions')?.remove();
+
+        const mirrorBubble = document.createElement('div');
+        mirrorBubble.className = 'msg ai daily-opening';
+        mirrorBubble.innerHTML = `
+          <div class="msg-label daily-opening-label">
+            你说过的话
+          </div>
+          <div class="msg-bubble daily-opening-bubble"
+               style="white-space:pre-line">
+            ${escapeHtml(mirrorText)}\n\n这些话放在一起，你觉得这段时间是什么颜色的？
+          </div>
+        `;
+        mirrorBubble.style.opacity = '0';
+        mirrorBubble.style.transition = 'opacity 0.8s ease';
+        chatArea.appendChild(mirrorBubble);
+        requestAnimationFrame(() => {
+          setTimeout(() => { mirrorBubble.style.opacity = '1'; }, 100);
+        });
+        chatArea.scrollTop = chatArea.scrollHeight;
+      });
+
+      document.getElementById('mirrorNo')?.addEventListener('click', () => {
+        mirrorPromptBubble.querySelector('.ending-actions')?.remove();
+      });
+
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+  }
+
+  try {
+    const rawHook = localStorage.getItem('undertow_tomorrow_hook');
+    if (rawHook) {
+      const hookObj = JSON.parse(rawHook);
+      if (
+        hookObj
+        && hookObj.hook
+        && hookObj.hook !== '[NONE]'
+        && hookObj.sourceDateKey
+        && hookObj.sourceDateKey !== getCurrentConversationDayKey()
+        && !hookObj.consumed
+      ) {
+        const hookBubble = document.createElement('div');
+        hookBubble.className = 'msg ai daily-opening';
+        hookBubble.innerHTML = `
+          <div class="msg-label daily-opening-label">昨日余波</div>
+          <div class="msg-bubble daily-opening-bubble">${escapeHtml(hookObj.hook)}</div>
+        `;
+        hookBubble.style.opacity = '0';
+        hookBubble.style.transition = 'opacity 0.8s ease';
+        chatArea.appendChild(hookBubble);
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            hookBubble.style.opacity = '1';
+          }, 360);
+        });
+
+        hookObj.consumed = true;
+        localStorage.setItem('undertow_tomorrow_hook', JSON.stringify(hookObj));
+      }
+    }
+  } catch {}
+
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function createRipple(targetEl) {
+  if (!targetEl) return;
+  const ripple = document.createElement('span');
+  ripple.className = 'send-ripple';
+  targetEl.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 700);
+}
+
+async function buildTodayMessages(newUserText) {
+  // Get today's existing turns from in-memory history groups.
+  const todayKey = getCurrentConversationDayKey();
+  const todayGroup = State.historyGroups.find((g) => g.dateKey === todayKey);
+
+  const messages = [];
+
+  if (todayGroup && todayGroup.entries.length > 0) {
+    for (const entry of todayGroup.entries) {
+      if (entry.content === '[今天到这里]') continue;
+
+      messages.push({
+        role: 'user',
+        content: entry.content || '',
+      });
+
+      if (entry.ai_response) {
+        messages.push({
+          role: 'assistant',
+          content: entry.ai_response,
+        });
+      }
+    }
+  }
+
+  messages.push({
+    role: 'user',
+    content: newUserText,
+  });
+
+  if (messages.length === 0 || messages[messages.length - 1].role !== 'user') {
+    return [{ role: 'user', content: newUserText }];
+  }
+
+  return messages;
+}
+/* ════════════════════════════════════════════════════════════
+  LLM API (OpenAI-compatible) — STREAMING
+════════════════════════════════════════════════════════════ */
+async function streamClaude(systemPrompt, messages, onChunk, onDone) {
+  const runtimeKey = (CONFIG.claudeApiKey || '').trim();
+  if (!runtimeKey) {
+    // Demo mode — simulate response
+    const demo = State.lang === 'zh'
+      ? '（未检测到 AgentRouter Key，请重新点击开始并输入 Key。）'
+      : '(No AgentRouter key found. Click Begin again and enter your key.)';
+    for (const ch of demo) {
+      await new Promise(r => setTimeout(r, 30));
+      onChunk(ch);
+    }
+    onDone(demo);
+    return;
+  }
+  const res = await fetch(buildApiUrl('/chat/completions'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${runtimeKey}`,
+    },
+    body: JSON.stringify({
+      model: CONFIG.model,
+      max_tokens: 320,
+      stream: true,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(await parseApiError(res));
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let   buf = '', full = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() || '';
+    for (const line of lines) {
+      const raw = line.trim();
+      if (!raw.startsWith('data:')) continue;
+      const payload = raw.slice(5).trim();
+      if (!payload || payload === '[DONE]') continue;
+      try {
+        const p = JSON.parse(payload);
+        const delta = p?.choices?.[0]?.delta?.content;
+        if (delta) {
+          full += delta;
+          onChunk(delta);
+        }
+      } catch {}
+    }
+  }
+  onDone(full);
+}
+/* ════════════════════════════════════════════════════════════
+   LLM API (OpenAI-compatible) — NON-STREAMING (for profile extraction, day-21)
+════════════════════════════════════════════════════════════ */
+async function callClaude(systemPrompt, userMsg, maxTokens = 240) {
+  const runtimeKey = (CONFIG.claudeApiKey || '').trim();
+  if (!runtimeKey) {
+    return '（演示模式）';
+  }
+  const res = await fetch(buildApiUrl('/chat/completions'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${runtimeKey}`,
+    },
+    body: JSON.stringify({
+      model: CONFIG.model,
+      max_tokens: maxTokens,
+      stream: false,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMsg },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(await parseApiError(res));
+  const json = await res.json();
+  const msg = json?.choices?.[0]?.message?.content;
+  if (typeof msg === 'string') return msg.trim();
+  if (Array.isArray(msg)) {
+    return msg.map((p) => (typeof p === 'string' ? p : (p?.text || ''))).join('').trim();
+  }
+  return '';
+}
+/* ════════════════════════════════════════════════════════════
+   RENDER — USER BUBBLE
+════════════════════════════════════════════════════════════ */
+function hideWelcome() {
+  chatWelcome.style.display = 'none';
+}
+function addUserMsg(text) {
+  hideWelcome();
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `
+    <div class="msg-label">${State.lang === 'zh' ? '你' : 'You'}</div>
+    <div class="msg-bubble">${text.replace(/</g,'&lt;')}</div>`;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+/* ════════════════════════════════════════════════════════════
+   RENDER — AI BUBBLE (streaming)
+════════════════════════════════════════════════════════════ */
+function createAIBubble() {
+  hideWelcome();
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  const label = State.lang === 'zh' ? '暗流' : 'Undertow';
+  div.innerHTML = `
+    <div class="msg-label">${label}</div>
+    <div class="msg-bubble"><span class="cursor-blink"></span></div>`;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+  return div.querySelector('.msg-bubble');
+}
+function appendToAIBubble(bubble, chunk) {
+  // Remove cursor, append chars with fade, re-add cursor
+  const cursor = bubble.querySelector('.cursor-blink');
+  if (cursor) cursor.remove();
+  for (const ch of chunk) {
+    const s = document.createElement('span');
+    s.textContent = ch;
+    s.style.cssText = 'opacity:0;transition:opacity 0.25s ease;display:inline';
+    bubble.appendChild(s);
+    setTimeout(() => { s.style.opacity = '1'; }, 10);
+  }
+  const cur = document.createElement('span');
+  cur.className = 'cursor-blink';
+  bubble.appendChild(cur);
+  requestAnimationFrame(() => {
+    chatArea.scrollTop = chatArea.scrollHeight;
+  });
+}
+function finishAIBubble(bubble) {
+  const cursor = bubble.querySelector('.cursor-blink');
+  if (cursor) cursor.remove();
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+function addErrorMsg(msg) {
+  const div = document.createElement('div');
+  div.className = 'msg-error';
+  div.textContent = msg || t().errorMsg;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+async function parseApiError(res) {
+  let detail = '';
+  try {
+    const text = await res.text();
+    if (text) {
+      try {
+        const json = JSON.parse(text);
+        detail = json?.error?.message || json?.message || text;
+      } catch {
+        detail = text;
+      }
+    }
+  } catch {}
+  const suffix = detail ? `: ${String(detail).slice(0, 180)}` : '';
+  return `API ${res.status}${suffix}`;
+}
+/* ════════════════════════════════════════════════════════════
+   SAVE ENTRY
+════════════════════════════════════════════════════════════ */
+async function saveEntry(content, aiResponse) {
+  const conversationDayKey = getCurrentConversationDayKey();
+  const entry = {
+    id: crypto.randomUUID(),
+    user_id: State.userId,
+    content,
+    ai_response: aiResponse,
+    day_number: State.dayNumber,
+    created_at: new Date().toISOString(),
+    conversation_day_key: conversationDayKey,
+    emotional_signal: null,
+    day_title: null,
+    profile_snapshot: null,
+  };
+
+  try {
+    const entries = JSON.parse(localStorage.getItem('undertow_entries') || '[]');
+    if (!Array.isArray(entries)) return null;
+    entries.push(entry);
+    localStorage.setItem('undertow_entries', JSON.stringify(entries));
+    markConversationActivity();
+    await checkAndDissolveMemory();
+  } catch {}
+
+  return entry.id;
+}
+/* ════════════════════════════════════════════════════════════
+   PROFILE EXTRACTION (background, silent)
+════════════════════════════════════════════════════════════ */
+async function extractProfile(userText, aiText, target = null) {
+  try {
+    const sys = '你是用户行为模式提取器。只输出合法JSON。不输出任何其他内容，不加任何解释，不加markdown代码块。';
+    const prompt = `
+用户今天说的话：${userText}
+暗流的回应：${aiText}
+这是用户使用的第 ${State.dayNumber} 天。
+
+请仔细分析，提取以下内容，以JSON格式返回。
+所有字段必须填写，没有明确信息时填 null，不要猜测：
+
+{
+  "emotional_tone": "用一个词描述今日情绪基调（如：平静、焦虑、疲惫、兴奋、压抑、矛盾）",
+  "energy_level": "高/中/低",
+  "topics": ["具体话题1", "具体话题2"],
+  "people_mentioned": ["提到的人名或关系，如：妈妈、前男友、同事小张，没有则返回空数组"],
+  "avoidance_signal": "用户是否在某个话题上刚要深入就转移了，或者描述得异常简短，请描述具体是什么话题，或null",
+  "recurring_theme": "这个话题或情绪在用户的记录里出现过吗？如果是，请说明是什么主题，大概第几次出现，或null",
+  "contradiction": "用户今天说的内容，和他们之前说过的事情或立场，是否有不一致？请具体描述矛盾是什么，或null",
+  "decision_pending": "用户提到了什么还没有做出的决定或还没有解决的事，或null",
+  "mood_shift": "和昨天或上一条记录相比，用户的状态有没有明显变化，变化是什么，或null",
+  "notable": "今天最值得长期记住的一句话、一个细节、或一个转折点，尽量用用户的原话，或null"
+}
+`;
+    const raw = await callClaude(sys, prompt, 180);
+    let json;
+    try { json = JSON.parse(raw); }
+    catch {
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (m) json = JSON.parse(m[0]);
+    }
+    if (!json) return;
+
+    try {
+      const entries = JSON.parse(localStorage.getItem('undertow_entries') || '[]');
+      if (!Array.isArray(entries) || entries.length === 0) return;
+      const idxById = target?.entryId
+        ? entries.findIndex((e) => e.id === target.entryId)
+        : -1;
+      const idxByCreatedAt = idxById === -1 && target?.createdAt
+        ? entries.findIndex((e) => e.created_at === target.createdAt)
+        : -1;
+      const idx = idxById >= 0 ? idxById : (idxByCreatedAt >= 0 ? idxByCreatedAt : entries.length - 1);
+      if (idx >= 0) {
+        entries[idx].emotional_signal = json.notable || json.emotional_tone;
+        entries[idx].profile_snapshot = json;
+        localStorage.setItem('undertow_entries', JSON.stringify(entries));
+      }
+    } catch {}
+
+    void updateProfileSummary();
+  } catch { /* silent */ }
+}
+
+async function generateDayTitle(todayGroup, entryId) {
+  try {
+    if (!todayGroup || todayGroup.entries.length === 0) return;
+
+    const allText = todayGroup.entries
+      .filter(e => e.content !== '[今天到这里]')
+      .map(e => e.content)
+      .join('\n');
+
+    if (!allText.trim()) return;
+
+    const sys = '你是标题提取器。只输出标题本身，不超过12个字，不加引号，不加标点解释，不加任何其他内容。';
+
+    const prompt = `根据用户今天说的这些话，写一个标题。
+不是总结事件，是捕捉今天最有重量的那个东西——
+可以是一个词，一个动作，一种感觉，一个还没有答案的问题。
+不要出现"今天""这天""第N天"这些词。
+最多12个字。
+
+用户今天说的话：
+${allText}`;
+
+    const title = await callClaude(sys, prompt, 40);
+    if (!title || title.trim().length === 0) return;
+    const clean = title.trim().slice(0, 20);
+
+    try {
+      const entries = JSON.parse(localStorage.getItem('undertow_entries') || '[]');
+      if (Array.isArray(entries) && entryId) {
+        const idx = entries.findIndex((e) => e.id === entryId);
+        if (idx !== -1) {
+          entries[idx].day_title = clean;
+          localStorage.setItem('undertow_entries', JSON.stringify(entries));
+        }
+      }
+    } catch {}
+
+    // 更新本地缓存并重新渲染侧边栏
+    const todayKey = getCurrentConversationDayKey();
+    const group = State.historyGroups
+      .find(g => g.dateKey === todayKey);
+    if (group && group.entries.length > 0) {
+      const target = entryId
+        ? group.entries.find((e) => e.id === entryId)
+        : group.entries[group.entries.length - 1];
+      if (target) {
+        target.day_title = clean;
+      } else {
+        group.entries[group.entries.length - 1].day_title = clean;
+      }
+      renderHistoryList(State.historyGroups);
+      if (typeof syncHistoryDrawer === 'function') {
+        syncHistoryDrawer();
+      }
+    }
+  } catch { /* silent */ }
+}
+
+async function generateSealedReview(group) {
+  const conversation = group.entries
+    .filter(e => e.content !== '[今天到这里]')
+    .map(e => `用户：${e.content}\n暗流：${e.ai_response || '—'}`)
+    .join('\n\n');
+
+  if (!conversation.trim()) return;
+
+  const existingText = [...group.entries]
+    .reverse()
+    .map((e) => e?.profile_snapshot?.sealed_review_text)
+    .find((v) => typeof v === 'string' && v.trim().length > 0);
+
+  // 在 chatArea 末尾加一个回顾气泡
+  const bubble = document.createElement('div');
+  bubble.className = 'msg ai ending-review';
+  bubble.style.opacity = '1';
+  bubble.innerHTML = `
+    <div class="msg-label ending-review-label">
+      从那天打捞
+    </div>
+    <div class="msg-bubble ending-review-bubble" id="streamBubble">
+      <span class="cursor-blink"></span>
+    </div>
+  `;
+  chatArea.appendChild(bubble);
+  chatArea.scrollTop = chatArea.scrollHeight;
+
+  const streamTarget = bubble.querySelector('#streamBubble');
+  if (!streamTarget) return;
+
+  if (existingText) {
+    finishAIBubble(streamTarget);
+    streamTarget.textContent = existingText;
+    chatArea.scrollTop = chatArea.scrollHeight;
+    return;
+  }
+
+  const sys = `
+你是「暗流」。用户在回看过去某一天的对话。
+你要为那一天写一个回望——
+
+不是复述发生了什么。
+是找到那一天里，有一件事在之后可能还在发酵，
+或者一个当时没说完的东西。
+可以轻轻问一句：那件事，现在还在吗？
+或者只是说出你看见的，然后停在那里。
+
+字数：60到90字。
+语气比当天的对话更慢，更有距离感，
+像隔着时间看那天的自己。
+禁止：「那天很有意义」「你很勇敢」
+      「时间会给你答案」之类的话。
+`;
+
+  let full = '';
+  try {
+    await streamClaude(
+      sys,
+      [{ role: 'user',
+         content: `这是${t().dayLabel(group.dayNumber)}的对话：\n${conversation}`
+      }],
+      (chunk) => {
+        full += chunk;
+        appendToAIBubble(streamTarget, chunk);
+      },
+      () => finishAIBubble(streamTarget)
+    );
+
+    const sealedText = full.trim();
+    if (!sealedText) return;
+
+    const target = [...group.entries]
+      .reverse()
+      .find((e) => e.content !== '[今天到这里]');
+    if (!target) return;
+
+    const mergedSnapshot = {
+      ...(target.profile_snapshot || {}),
+      sealed_review_text: sealedText,
+      sealed_review_at: new Date().toISOString(),
+    };
+
+    const db = getDB();
+    if (db && target.id) {
+      await db.from('entries')
+        .update({ profile_snapshot: mergedSnapshot })
+        .eq('id', target.id)
+        .eq('user_id', State.userId);
+    } else {
+      try {
+        const entries = JSON.parse(localStorage.getItem('undertow_entries') || '[]');
+        const idx = entries.findIndex((e) => e.created_at === target.created_at);
+        if (idx >= 0) {
+          entries[idx].profile_snapshot = mergedSnapshot;
+          localStorage.setItem('undertow_entries', JSON.stringify(entries));
+          await checkAndDissolveMemory();
+        }
+      } catch {}
+    }
+
+    target.profile_snapshot = mergedSnapshot;
+  } catch {
+    finishAIBubble(streamTarget);
+  }
+}
+
+async function updateProfileSummary() {
+  try {
+    const entries = await loadAllEntries();
+
+    if (!entries || entries.length < 3) return;
+    const recent = entries
+      .slice()
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 30);
+
+    if (recent.length % 5 !== 0) return;
+
+    const entriesSummary = recent
+      .slice()
+      .reverse()
+      .map(e =>
+      `第${e.day_number}天 [${e.emotional_signal || ''}]：${e.content}`
+      )
+      .join('\n');
+
+    const sys = '你是用户深层画像生成器。基于用户的对话历史，生成一段给AI用的用户理解摘要。只输出摘要本身，不输出任何其他内容。';
+
+    const prompt = `
+基于以下用户的对话历史，生成一段300字以内的用户理解摘要。
+这段摘要是给另一个AI读的，用来帮助它更好地陪伴这个用户。
+
+请包含以下内容（如果有足够信息的话）：
+--这个人在生活的哪个阶段，大概面临什么处境
+--他们反复出现的情绪模式是什么
+--他们反复回避的话题或情绪是什么
+--他们说自己在乎的事，和他们实际谈论的事，是否一致
+--他们在什么状态下说话最真实
+--他们目前悬而未决的事情是什么
+--任何值得长期记住的具体细节
+
+不要写成分析报告。写成简短、直接、像内部备忘录一样的段落。
+
+用户对话历史：
+${entriesSummary}
+`;
+
+    const summary = await callClaude(sys, prompt, 400);
+    if (!summary) return;
+    localStorage.setItem('undertow_profile_summary', summary);
+  } catch { /* silent */ }
+}
+
+const END_OF_DAY_RE = /^\s*(\[今天到这里\]|今天到这里|收工|先到这里)\s*$/i;
+
+function isEndOfDaySignal(text) {
+  return END_OF_DAY_RE.test(String(text || '').trim());
+}
+
+function getAnalyzableDayEntries(entries) {
+  return (entries || []).filter((e) => {
+    const content = String(e?.content || '').trim();
+    return content && !isEndOfDaySignal(content);
+  });
+}
+
+function buildDayPackText(dayEntries) {
+  return {
+    dayUserText: dayEntries.map((e, idx) => `第${idx + 1}条：${e.content || ''}`).join('\n'),
+    dayAiText: dayEntries.map((e, idx) => `第${idx + 1}条回应：${e.ai_response || ''}`).join('\n'),
+  };
+}
+
+const MEMORY_DISSOLVE_TEXT = '（深水区的记忆已溶解。仅保留当天的感知与侧写。）';
+
+function getStorageSizeMB() {
+  let totalChars = 0;
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (!key) continue;
+    totalChars += (localStorage.getItem(key) || '').length;
+  }
+  return (totalChars * 2) / (1024 * 1024);
+}
+
+function injectPoeticWarning() {
+  const bubble = document.createElement('div');
+  bubble.className = 'msg ai memory-warning';
+  bubble.innerHTML = `
+    <div class="msg-bubble" style="color: rgba(140, 180, 220, 0.6); font-style: italic; border: 1px solid rgba(140, 180, 220, 0.2); background: transparent;">
+      （水底的压强变大了）这里沉淀的记忆已经很深了。有些太久远的话语，即将溶解在水里。但那些最重要的感受，我会替你留着。
+    </div>
+  `;
+
+  bubble.style.opacity = '0';
+  bubble.style.transition = 'opacity 1.5s ease';
+  chatArea.appendChild(bubble);
+
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      bubble.style.opacity = '1';
+    }, 100);
+  });
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function buildDissolvedEntry(group) {
+  const anchor = [...(group.entries || [])]
+    .reverse()
+    .find((e) => String(e?.content || '').trim() && !isEndOfDaySignal(e?.content))
+    || group.entries?.[group.entries.length - 1]
+    || null;
+
+  return {
+    id: crypto.randomUUID(),
+    user_id: anchor?.user_id || State.userId,
+    content: MEMORY_DISSOLVE_TEXT,
+    ai_response: '',
+    day_number: Number.isFinite(anchor?.day_number) ? anchor.day_number : (group.dayNumber || 1),
+    created_at: anchor?.created_at || new Date().toISOString(),
+    conversation_day_key: group.dateKey || anchor?.conversation_day_key || getDateKey(new Date().toISOString()),
+    emotional_signal: anchor?.emotional_signal || null,
+    day_title: anchor?.day_title || null,
+    profile_snapshot: anchor?.profile_snapshot || null,
+  };
+}
+
+async function checkAndDissolveMemory() {
+  const TRIGGER_THRESHOLD = 4.8;
+  const TARGET_THRESHOLD = 3.0;
+  let currentSize = getStorageSizeMB();
+
+  if (currentSize < TRIGGER_THRESHOLD) return;
+
+  let entries;
+  try {
+    entries = JSON.parse(localStorage.getItem('undertow_entries') || '[]');
+  } catch {
+    return;
+  }
+  if (!Array.isArray(entries) || entries.length === 0) return;
+
+  const model = buildHistoryModel(entries);
+  const groupsByDate = new Map(model.groups.map((g) => [g.dateKey, {
+    dateKey: g.dateKey,
+    dayNumber: g.dayNumber,
+    entries: [...g.entries],
+  }]));
+  const orderedGroups = model.dateKeysAsc.map((key) => groupsByDate.get(key)).filter(Boolean);
+  const todayKey = getCurrentConversationDayKey();
+  let dissolvedCount = 0;
+
+  for (const group of orderedGroups) {
+    if (currentSize <= TARGET_THRESHOLD) break;
+    if (!group || !group.entries || group.entries.length === 0) continue;
+    if (group.dateKey === todayKey) continue;
+
+    const alreadyDissolved = group.entries.length === 1
+      && String(group.entries[0]?.content || '').trim() === MEMORY_DISSOLVE_TEXT;
+    if (alreadyDissolved) continue;
+
+    group.entries = [buildDissolvedEntry(group)];
+    dissolvedCount += 1;
+
+    const flattened = orderedGroups.flatMap((g) => g.entries || []);
+    localStorage.setItem('undertow_entries', JSON.stringify(flattened));
+    currentSize = getStorageSizeMB();
+  }
+
+  if (dissolvedCount > 0) {
+    injectPoeticWarning();
+    await updateHistoryListOnly();
+  }
+}
+
+function hasDayEndMarker(entries, dayKey) {
+  return (entries || []).some((e) => {
+    if (!isEndOfDaySignal(e?.content)) return false;
+    const markerDay = e?.conversation_day_key || getDateKey(e?.created_at);
+    return markerDay === dayKey;
+  });
+}
+
+async function generateTomorrowHook(dayEntries, sourceDateKey) {
+  try {
+    if (!dayEntries || !dayEntries.length || !sourceDateKey) return;
+
+    const existingRaw = localStorage.getItem('undertow_tomorrow_hook');
+    if (existingRaw) {
+      try {
+        const existing = JSON.parse(existingRaw);
+        if (existing?.sourceDateKey === sourceDateKey) return;
+      } catch {}
+    }
+
+    const conversation = dayEntries
+      .map((e, idx) => `第${idx + 1}段\n用户：${e.content || ''}\n暗流：${e.ai_response || '—'}`)
+      .join('\n\n');
+
+    const sys = '你是昨日钩子提炼器。你只输出一句中文短句，或输出 [NONE]。不要输出解释。';
+    const prompt = `
+请评估今天用户的对话中，是否存在强烈情绪波动、未解决困惑、或明天可能继续发酵的悬念。
+
+规则：
+--如果值得被轻轻提起：输出一句中文，12到22字，克制、隐晦、不说教。
+--如果今天只是平淡闲聊：只输出 [NONE]。
+--禁止输出多句，禁止解释。
+
+今天对话：
+${conversation}
+`;
+
+    const raw = await callClaude(sys, prompt, 80);
+    const hook = (raw || '').trim().replace(/^"|"$/g, '');
+    const finalHook = hook ? hook.slice(0, 28) : '[NONE]';
+
+    localStorage.setItem('undertow_tomorrow_hook', JSON.stringify({
+      sourceDateKey,
+      hook: finalHook,
+      consumed: false,
+      createdAt: new Date().toISOString(),
+    }));
+  } catch {}
+}
+
+async function runEndOfDayAnalysis(triggerText) {
+  if (!isEndOfDaySignal(triggerText)) return;
+
+  const todayKey = getCurrentConversationDayKey();
+  const todayGroup = State.historyGroups.find((g) => g.dateKey === todayKey);
+  if (!todayGroup || !todayGroup.entries.length) return;
+
+  const dayEntries = getAnalyzableDayEntries(todayGroup.entries);
+  if (!dayEntries.length) return;
+
+  const targetEntry = dayEntries[dayEntries.length - 1];
+  const target = {
+    entryId: targetEntry?.id || null,
+    createdAt: targetEntry?.created_at || null,
+    dateKey: todayKey,
+  };
+
+  const { dayUserText, dayAiText } = buildDayPackText(dayEntries);
+
+  await extractProfile(dayUserText, dayAiText, target);
+  await generateDayTitle(todayGroup, target.entryId);
+  await generateTomorrowHook(dayEntries, todayKey);
+}
+
+async function runAutoDayWrapIfNeeded() {
+  if (State.streaming) return;
+
+  const todayKey = getCurrentConversationDayKey();
+  const todayGroup = State.historyGroups.find((g) => g.dateKey === todayKey);
+  if (todayGroup && todayGroup.entries.length > 0) return;
+
+  const latestPastGroup = State.historyGroups.find((g) => g.dateKey !== todayKey);
+  if (!latestPastGroup || !latestPastGroup.entries.length) return;
+
+  const dayEntries = getAnalyzableDayEntries(latestPastGroup.entries);
+  if (!dayEntries.length) return;
+
+  const alreadyPacked = dayEntries.some((e) => {
+    const hasTitle = String(e.day_title || '').trim().length > 0;
+    const hasSignal = String(e.emotional_signal || '').trim().length > 0;
+    const hasSnapshot = !!e.profile_snapshot;
+    return hasTitle || hasSignal || hasSnapshot;
+  });
+  if (alreadyPacked) return;
+
+  const targetEntry = dayEntries[dayEntries.length - 1];
+  const target = {
+    entryId: targetEntry?.id || null,
+    createdAt: targetEntry?.created_at || null,
+    dateKey: latestPastGroup.dateKey,
+  };
+  const { dayUserText, dayAiText } = buildDayPackText(dayEntries);
+
+  await extractProfile(dayUserText, dayAiText, target);
+  await generateDayTitle(latestPastGroup, target.entryId);
+  await generateTomorrowHook(dayEntries, latestPastGroup.dateKey);
+  await updateHistoryListOnly();
+}
+
+let dayWrapPendingCount = 0;
+let dayClosureInFlight = false;
+
+function setDayWrapPending(delta) {
+  dayWrapPendingCount = Math.max(0, dayWrapPendingCount + delta);
+}
+
+function playDayWrapCurtain() {
+  if (!dayWrapCurtain) return;
+  dayWrapCurtain.classList.remove('show');
+  // Force reflow so repeated day-wraps can replay the animation.
+  void dayWrapCurtain.offsetWidth;
+  dayWrapCurtain.classList.add('show');
+  setTimeout(() => {
+    dayWrapCurtain.classList.remove('show');
+  }, 3050);
+}
+
+window.addEventListener('beforeunload', (e) => {
+  if (dayWrapPendingCount <= 0) return;
+  e.preventDefault();
+  e.returnValue = '';
+});
+
+async function withDayWrapGuard(task) {
+  setDayWrapPending(1);
+  playDayWrapCurtain();
+  try {
+    await task();
+  } finally {
+    setDayWrapPending(-1);
+  }
+}
+
+async function finalizeDayClosure(endingText) {
+  if (dayClosureInFlight) return;
+  dayClosureInFlight = true;
+
+  try {
+    const todayKey = getCurrentConversationDayKey();
+    const nowIso = new Date().toISOString();
+    const finalText = String(endingText || '').trim() || u().bye;
+    let wrote = false;
+
+    try {
+      const entries = JSON.parse(localStorage.getItem('undertow_entries') || '[]');
+      if (!Array.isArray(entries)) return;
+
+      // Idempotent guard: prevent duplicate day-end marker writes for the same day.
+      if (hasDayEndMarker(entries, todayKey)) {
+        return;
+      }
+
+      entries.push({
+        id: crypto.randomUUID(),
+        user_id: State.userId,
+        content: '[今天到这里]',
+        ai_response: finalText,
+        day_number: State.dayNumber,
+        created_at: nowIso,
+        conversation_day_key: todayKey,
+        emotional_signal: 'end_of_day',
+        day_title: null,
+        profile_snapshot: null,
+      });
+      localStorage.setItem('undertow_entries', JSON.stringify(entries));
+      markConversationActivity();
+      wrote = true;
+    } catch {}
+
+    if (wrote) {
+      await checkAndDissolveMemory();
+      await updateHistoryListOnly();
+      await runEndOfDayAnalysis('[今天到这里]');
+      await checkAndDissolveMemory();
+    }
+  } finally {
+    dayClosureInFlight = false;
+  }
+}
+/* ════════════════════════════════════════════════════════════
+   HINT BAR
+════════════════════════════════════════════════════════════ */
+function showHint(text) {
+  const el = document.createElement('div');
+  el.className = 'hint-bar';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+function showPhaseTransition(phase) {
+  const messages = {
+    seeing: {
+      zh: '暗流开始看见一些东西了',
+    },
+    simulating: {
+      zh: '决策推演已解锁·暗流已准备好',
+    },
+  };
+
+  if (!messages[phase]) return;
+  const msg = messages[phase].zh;
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.96);
+    z-index: 150;
+    background: rgba(3, 10, 25, 0.92);
+    backdrop-filter: blur(30px) saturate(180%);
+    border: 1px solid rgba(80, 130, 200, 0.2);
+    border-radius: 20px;
+    padding: 2rem 3rem;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+    pointer-events: none;
+    box-shadow: 0 0 80px rgba(30, 80, 200, 0.12);
+  `;
+
+  const label = document.createElement('div');
+  label.style.cssText = `
+    font-size: 0.62rem;
+    letter-spacing: 0.45em;
+    color: rgba(100, 150, 220, 0.5);
+    margin-bottom: 0.8rem;
+    text-transform: uppercase;
+    font-family: 'IM Fell English', serif;
+  `;
+  label.textContent = phase === 'seeing'
+    ? (State.lang === 'zh' ? '第 10 天' : 'Day 10')
+    : (State.lang === 'zh' ? '第 22 天' : 'Day 22');
+
+  const text = document.createElement('div');
+  text.style.cssText = `
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    color: rgba(190, 225, 255, 0.9);
+    letter-spacing: 0.08em;
+    line-height: 1.7;
+    font-family: 'Noto Serif SC', serif;
+    font-weight: 300;
+  `;
+  text.textContent = msg;
+
+  const star = document.createElement('div');
+  star.style.cssText = `
+    margin-bottom: 1rem;
+    opacity: 0.6;
+    font-size: 1.2rem;
+  `;
+  star.textContent = '✦';
+
+  overlay.appendChild(star);
+  overlay.appendChild(label);
+  overlay.appendChild(text);
+  document.body.appendChild(overlay);
+
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      overlay.style.opacity = '1';
+      overlay.style.transform = 'translate(-50%, -50%) scale(1)';
+    }, 50);
+  });
+
+  setTimeout(() => {
+    overlay.style.opacity = '0';
+    overlay.style.transform = 'translate(-50%, -50%) scale(0.98)';
+    setTimeout(() => overlay.remove(), 900);
+  }, 3500);
+}
+/* ════════════════════════════════════════════════════════════
+   DAY-21 OVERLAY
+════════════════════════════════════════════════════════════ */
+async function showDay21() {
+  day21Overlay.style.display = 'flex';
+  requestAnimationFrame(() => day21Overlay.classList.add('visible'));
+  try {
+    const sys = await buildSystemPrompt();
+    let historyText = '（暂无历史记录）';
+    const profileSummary =
+      localStorage.getItem('undertow_profile_summary') || '（用户刚刚开始使用，尚无积累）';
+    const entries = await loadAllEntries();
+    if (entries && entries.length > 0) {
+      const model = buildHistoryModel(entries.slice(-21));
+      const ordered = [...model.dateKeysAsc].flatMap((key) => {
+        const g = model.groups.find((item) => item.dateKey === key);
+        return g?.entries || [];
+      });
+      historyText = ordered.map(e =>
+        `${t().dayLabel(e.day_number || 1)}：${e.content || ''}`
+      ).join('\n');
+    }
+    const prompt = `
+你陪这个用户走过了21天。
+
+在这21天里，你积累了足够多的东西。
+现在你要说出一件事-
+不是总结，不是回顾，
+而是一个这个用户自己从来没有直接说出来过、
+但在这21天的记录里反复以不同形式出现的模式。
+
+写作要求：
+--必须非常具体。不能说「你经常感到压力」这种泛泛的话。
+要说出是什么具体的情境，用了什么具体的词，在哪几天出现。
+--不要分析原因，不要给解释，不要给建议。
+只是陈述你看见的事实。
+--结尾只问一个问题。
+这个问题要触及他从没有正面处理过的地方。
+不能是「你有没有想过......」这种开放式问题。
+要更具体，更直接，更难以回避。
+--字数：100到150字之间。语气比平时更慢，更沉。
+
+你掌握的关于这个用户的完整信息：
+${profileSummary}
+
+这21天他说过的所有话的摘要：
+${historyText}
+`;
+    const text = await callClaude(sys, prompt, 280);
+    day21Text.textContent = text;
+  } catch {
+    day21Text.textContent = '暗流短暂失焦，但你已经走过了21天。';
+  }
+}
+day21CloseBtn.addEventListener('click', () => {
+  localStorage.setItem('undertow_day21_shown', '1');
+  State.day21Shown = true;
+  day21Overlay.style.transition = 'opacity 0.7s ease';
+  day21Overlay.style.opacity = '0';
+  setTimeout(() => {
+    day21Overlay.style.display = 'none';
+    day21Overlay.classList.remove('visible');
+  }, 720);
+});
+/* ════════════════════════════════════════════════════════════
+   DECISION DRAWER
+════════════════════════════════════════════════════════════ */
+function openDrawer()  { decisionDrawer.classList.add('open'); }
+function closeDrawer() { decisionDrawer.classList.remove('open'); drawerResult.textContent = ''; }
+drawerBackdrop.addEventListener('click', closeDrawer);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+drawerSubmit.addEventListener('click', async () => {
+  const situation = $('decisionSituation')?.value.trim() || '';
+  const options   = $('decisionOptions')?.value.trim() || '';
+  const fear      = $('decisionFear')?.value.trim() || '';
+  
+  if (!situation) {
+    drawerResult.textContent = '先说说你在纠结什么。';
+    return;
+  }
+  
+  drawerSubmit.disabled = true;
+  drawerResult.textContent = '暗流正在推演中…';
+  
+  try {
+    const profileSummary = 
+      localStorage.getItem('undertow_profile_summary') 
+      || '（暂无用户画像）';
+    
+    const sys = `你是「暗流」，一个深度了解用户的长期陪伴者。
+用户现在面临一个决定，需要你帮他真正推演清楚。
+
+你掌握的用户信息：
+${profileSummary}
+
+推演规则：
+1. 把用户列出的每个选项都走一遍——
+   这个选项选了，三个月后最可能发生什么？
+   这个选项选了，他最担心的那件事会怎么演变？
+2. 把你从用户历史里观察到的模式带进来——
+   他过去做类似决定的时候，是什么模式？
+   他现在说的顾虑，是真正的阻力还是表层的恐惧？
+3. 最后给出一个轻微的倾向——
+   不是命令，是"如果是我，我会更倾向X，因为……"
+   这个倾向必须基于你对这个用户的具体了解，
+   不能是泛泛的道理。
+4. 结尾问一个问题，让用户自己做最终决定。
+
+格式要求：
+——每个选项单独一段
+——有明确的路径感，不是泛泛分析
+——最后的倾向性建议要具体，要和这个用户有关
+——字数200到300字
+——禁止说「两个选项都有优缺点」这种废话
+——禁止说「最终还是要看你自己」不说废话直接推演`;
+
+    const prompt = `用户面临的决定：${situation}
+
+选项：${options || '用户没有列出具体选项'}
+
+最担心的是：${fear || '用户没有说明'}
+
+请按照你的推演规则，帮用户把这个决定想清楚。`;
+
+    const result = await callClaude(sys, prompt, 500);
+    drawerResult.textContent = result;
+  } catch {
+    drawerResult.textContent = t().errorMsg;
+  } finally {
+    drawerSubmit.disabled = false;
+  }
+});
+
+// ── 侧边栏工具按钮 ──────────────────────────
+const toolSimulate   = $('toolSimulate');
+const toolMirror     = $('toolMirror');
+const toolProfile    = $('toolProfile');
+const profileDrawer  = $('profileDrawer');
+const profileDrawerBackdrop = $('profileDrawerBackdrop');
+const profileDrawerContent  = $('profileDrawerContent');
+
+// 深入推演：打开决策抽屉
+toolSimulate?.addEventListener('click', () => {
+  State.pendingDecision = userInput.value.trim();
+  openDrawer();
+  // 手机端关闭侧边栏
+  if (window.innerWidth <= 768) {
+    document.body.classList.remove('sidebar-open');
+    if (typeof closeHistoryDrawer === 'function') closeHistoryDrawer();
+  }
+});
+
+// 回顾这段时间：触发镜子功能
+toolMirror?.addEventListener('click', () => {
+  const allEntries = State.historyGroups.flatMap(g => g.entries || []);
+  const notables = allEntries
+    .map(e => e?.profile_snapshot?.notable)
+    .filter(n => n && n.trim() && n.length > 4)
+    .slice(-8);
+
+  if (notables.length < 3) return;
+
+  const mirrorText = notables.map(n => `「${n}」`).join('\n');
+
+  // 关闭侧边栏，在主界面显示
+  if (window.innerWidth <= 768) {
+    document.body.classList.remove('sidebar-open');
+    if (typeof closeHistoryDrawer === 'function') closeHistoryDrawer();
+  }
+
+  // 切换到今天的视图
+  const todayKey = getCurrentConversationDayKey();
+  const todayGroup = State.historyGroups.find(g => g.dateKey === todayKey);
+  if (todayGroup) {
+    State.activeHistoryDay = todayGroup.dateKey;
+    State.manualHistoryView = false;
+    renderDayMessages(todayGroup);
+    for (const n of historyList.querySelectorAll('.history-card')) {
+      n.classList.remove('active');
+    }
+    const todayCard = historyList.querySelector('.history-card.is-today');
+    if (todayCard) todayCard.classList.add('active');
+  }
+
+  setTimeout(() => {
+    const mirrorBubble = document.createElement('div');
+    mirrorBubble.className = 'msg ai ending-review';
+    mirrorBubble.innerHTML = `
+      <div class="msg-label ending-review-label">你说过的话</div>
+      <div class="msg-bubble ending-review-bubble"
+           style="white-space:pre-line">
+        ${escapeHtml(mirrorText)}\n\n这些话放在一起，你觉得这段时间是什么颜色的？
+      </div>
+    `;
+    mirrorBubble.style.opacity = '0';
+    mirrorBubble.style.transition = 'opacity 0.8s ease';
+    chatArea.appendChild(mirrorBubble);
+    requestAnimationFrame(() => {
+      setTimeout(() => { mirrorBubble.style.opacity = '1'; }, 100);
+    });
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }, 200);
+});
+
+// 暗流的侧写：显示 profile_summary
+toolProfile?.addEventListener('click', () => {
+  const summary = localStorage.getItem('undertow_profile_summary') || '';
+  if (!summary.trim()) {
+    profileDrawerContent.textContent =
+      '还不够了解你。\n多说一些，暗流会慢慢看见更多。';
+  } else {
+    profileDrawerContent.textContent = summary;
+  }
+  profileDrawer.classList.add('open');
+  if (window.innerWidth <= 768) {
+    document.body.classList.remove('sidebar-open');
+    if (typeof closeHistoryDrawer === 'function') closeHistoryDrawer();
+  }
+});
+
+profileDrawerBackdrop?.addEventListener('click', () => {
+  profileDrawer.classList.remove('open');
+});
+/* ════════════════════════════════════════════════════════════
+   SEND MESSAGE
+════════════════════════════════════════════════════════════ */
+const DECISION_RE = /要不要|该不该|纠结|选择|决定/i;
+const ENDING_RE = /今天就到这里|到这里吧|就聊到这|晚安|要睡了|累了|先这样|拜拜/i;
+
+async function generateEndingReview(todayGroup) {
+  State.streaming = true;
+  sendBtn.disabled = true;
+  userInput.disabled = true;
+
+  const todayConversation = getAnalyzableDayEntries(todayGroup?.entries || [])
+    .map((e) => `用户：${e.content || ''}\n暗流：${e.ai_response || '—'}`)
+    .join('\n\n');
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg ai ending-review';
+  bubble.style.opacity = '1';
+  bubble.innerHTML = `
+    <div class="msg-label ending-review-label">
+      今日沉淀
+    </div>
+    <div class="msg-bubble ending-review-bubble" id="streamBubble">
+      <span class="cursor-blink"></span>
+    </div>
+  `;
+  chatArea.appendChild(bubble);
+  chatArea.scrollTop = chatArea.scrollHeight;
+
+  const streamBubble = bubble.querySelector('#streamBubble');
+  if (!streamBubble) {
+    State.streaming = false;
+    sendBtn.disabled = false;
+    userInput.disabled = false;
+    userInput.focus();
+    return;
+  }
+  let full = '';
+
+  const sys = `
+你是「暗流」。用户今天结束对话了，你要给今天一个收尾。
+
+今天说了这些：
+${todayConversation}
+
+要求：
+——不是总结，不是复述。
+——找到今天对话里最有重量的一个东西——
+  一个转变，一个还没说完的东西，一个刚刚浮出来的认知。
+——可以点出今天和以前某次对话的联系，
+  如果你觉得有的话。
+——结尾可以是一句话，放在那里，不问问题。
+  也可以是一个轻轻的期待，比如：
+  「明天，或许会有一个答案。」
+——字数：60到100字。
+——禁止说：「今天很充实」「你很勇敢」
+  「明天会更好」「感谢你的分享」
+——语气：像深夜里，
+  有人帮你把今天的事情轻轻叠好，放在桌上。
+`;
+
+  try {
+    await streamClaude(
+      sys,
+      [{ role: 'user', content: '今天就到这里了。' }],
+      (chunk) => {
+        full += chunk;
+        appendToAIBubble(streamBubble, chunk);
+      },
+      async (fullText) => {
+        finishAIBubble(streamBubble);
+        await withDayWrapGuard(async () => {
+          await finalizeDayClosure(fullText);
+        });
+      }
+    );
+  } catch {
+    finishAIBubble(streamBubble);
+  } finally {
+    State.streaming = false;
+    sendBtn.disabled = false;
+    userInput.disabled = false;
+    userInput.focus();
+  }
+}
+
+async function handleSend() {
+  const text = userInput.value.trim();
+  if (!text || State.streaming) return;
+
+  createRipple(document.querySelector('.send-btn-wrap'));
+  markConversationActivity();
+
+  await runAutoDayWrapIfNeeded();
+
+  const todayKey = getCurrentConversationDayKey();
+  const switchedFromHistoryDay = State.activeHistoryDay && State.activeHistoryDay !== todayKey;
+  // Lock today's key during sending so activeHistoryDay does not switch mid-stream.
+  State.activeHistoryDay = todayKey;
+  State.manualHistoryView = false;
+  if (switchedFromHistoryDay) {
+    chatArea.innerHTML = '';
+    for (const n of historyList.querySelectorAll('.history-card')) {
+      n.classList.remove('active');
+    }
+  }
+
+  // Decision detection
+  const isDecision = DECISION_RE.test(text);
+  const isEnding = ENDING_RE.test(text);
+  if (isDecision) {
+    State.pendingDecision = text;
+  } else {
+    State.pendingDecision = '';
+  }
+
+  if (isEnding) {
+    addUserMsg(text);
+    userInput.value = '';
+    autoGrow();
+
+    const todayKey = getCurrentConversationDayKey();
+    const todayGroup = State.historyGroups
+      .find(g => g.dateKey === todayKey);
+
+    const alreadyClosed = !!(todayGroup &&
+      todayGroup.entries.some(e => isEndOfDaySignal(e.content)));
+    if (alreadyClosed) {
+      const closedBubble = document.createElement('div');
+      closedBubble.className = 'msg ai';
+      closedBubble.innerHTML = `
+        <div class="msg-label">暗流</div>
+        <div class="msg-bubble">${escapeHtml(u().alreadyClosed)}</div>`;
+      chatArea.appendChild(closedBubble);
+      chatArea.scrollTop = chatArea.scrollHeight;
+      return;
+    }
+
+    const hasContent = todayGroup &&
+      todayGroup.entries.filter(e =>
+        e.content !== '[今天到这里]'
+      ).length > 0;
+
+    State.streaming = true;
+    sendBtn.disabled = true;
+    userInput.disabled = true;
+
+    // 第一条：正常的晚安回应
+    const firstBubble = createAIBubble();
+    const goodnight = u().goodnight;
+
+    for (const ch of goodnight) {
+      appendToAIBubble(firstBubble, ch);
+      await new Promise(r => setTimeout(r, 35));
+    }
+    finishAIBubble(firstBubble);
+
+    if (!hasContent) {
+      State.streaming = false;
+      sendBtn.disabled = false;
+      userInput.disabled = false;
+      return;
+    }
+
+    // 停顿 1.8 秒，制造"发现了什么"的感觉
+    await new Promise(r => setTimeout(r, 1800));
+
+    // 第二条：彩蛋消息
+    const eggBubble = document.createElement('div');
+    eggBubble.className = 'msg ai ending-egg';
+    eggBubble.style.opacity = '0';
+    eggBubble.style.transition = 'opacity 0.8s ease';
+
+    const eggText = u().eggText;
+
+    eggBubble.innerHTML = `
+      <div class="msg-label" style="color:rgba(100,155,220,0.4);
+           font-size:0.62rem;letter-spacing:0.25em;">
+        ${u().noticedLabel}
+      </div>
+      <div class="msg-bubble ending-egg-bubble">
+        ${escapeHtml(eggText)}
+      </div>
+      <div class="ending-actions">
+        <button class="ending-btn" id="endingYes">
+          ${u().surfaceBtn}
+        </button>
+        <button class="ending-btn ending-btn-skip" id="endingNo">
+          ${u().skipBtn}
+        </button>
+      </div>
+    `;
+
+    chatArea.appendChild(eggBubble);
+    chatArea.scrollTop = chatArea.scrollHeight;
+
+    // 淡入
+    requestAnimationFrame(() => {
+      setTimeout(() => { eggBubble.style.opacity = '1'; }, 30);
+    });
+
+    document.getElementById('endingYes')?.addEventListener('click', async () => {
+      eggBubble.querySelector('.ending-actions')?.remove();
+      await generateEndingReview(todayGroup);
+    });
+
+    document.getElementById('endingNo')?.addEventListener('click', () => {
+      eggBubble.querySelector('.ending-actions')?.remove();
+      const byeBubble = document.createElement('div');
+      byeBubble.className = 'msg ai';
+      byeBubble.innerHTML = `
+        <div class="msg-label">暗流</div>
+        <div class="msg-bubble">${escapeHtml(u().bye)}</div>`;
+      chatArea.appendChild(byeBubble);
+      chatArea.scrollTop = chatArea.scrollHeight;
+      void withDayWrapGuard(async () => {
+        await finalizeDayClosure(u().bye);
+      });
+    });
+
+    State.streaming = false;
+    sendBtn.disabled = false;
+    userInput.disabled = false;
+    return;
+  }
+
+  addUserMsg(text);
+  userInput.value = '';
+  autoGrow();
+  State.streaming = true;
+  sendBtn.disabled = true;
+  userInput.disabled = true;
+  const bubble = createAIBubble();
+  let fullResponse = '';
+  try {
+    const sys = await buildSystemPrompt();
+    const messages = await buildTodayMessages(text);
+    await streamClaude(sys, messages,
+      (chunk) => {
+        fullResponse += chunk;
+        appendToAIBubble(bubble, chunk);
+      },
+      async (full) => {
+        fullResponse = full;
+        finishAIBubble(bubble);
+        const entryId = await saveEntry(text, full);
+        await updateHistoryListOnly();
+        const totalTurns = State.historyGroups
+          .flatMap((g) => g.entries || [])
+          .filter((e) => {
+            const content = String(e?.content || '').trim();
+            return content && content !== '[今天到这里]';
+          }).length;
+        if (entryId && totalTurns > 0 && totalTurns % 5 === 0) {
+          void extractProfile(text, full, { entryId });
+        }
+        void generateDayTitle(
+          State.historyGroups.find(g =>
+            g.dateKey === getCurrentConversationDayKey()
+          ),
+          entryId
+        );
+        await runEndOfDayAnalysis(text);
+
+        if (State.dayNumber === 10) {
+          setTimeout(() => {
+            showPhaseTransition('seeing');
+          }, 2000);
+          State.phase = 'seeing';
+          localStorage.setItem('undertow_phase', 'seeing');
+        }
+
+        if (State.dayNumber === 22) {
+          setTimeout(() => {
+            showPhaseTransition('simulating');
+          }, 2000);
+          State.phase = 'simulating';
+          localStorage.setItem('undertow_phase', 'simulating');
+        }
+      }
+    );
+  } catch (err) {
+    finishAIBubble(bubble);
+    addErrorMsg(`${t().errorMsg} ${err?.message ? `(${err.message})` : ''}`.trim());
+    console.error(err);
+  } finally {
+    State.streaming = false;
+    sendBtn.disabled = false;
+    userInput.disabled = false;
+    userInput.focus();
+  }
+}
+
+sendBtn.addEventListener('click', handleSend);
+userInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+});
+/* ════════════════════════════════════════════════════════════
+   HISTORY SIDEBAR (mobile toggle)
+════════════════════════════════════════════════════════════ */
+historyBtn.addEventListener('click', () => {
+  if (window.innerWidth <= 768) {
+    // 手机端：优先用 historyDrawer，没有就用 sidebar-open
+    const historyDrawer = document.getElementById('historyDrawer');
+    if (historyDrawer) {
+      const isOpen = historyDrawer.classList.contains('open');
+      if (isOpen) {
+        historyDrawer.classList.remove('open');
+        historyDrawer.style.transform = 'translateX(-100%)';
+        const overlay = document.getElementById('historyDrawerOverlay');
+        if (overlay) {
+          overlay.style.opacity = '0';
+          overlay.style.pointerEvents = 'none';
+        }
+      } else {
+        historyDrawer.classList.add('open');
+        historyDrawer.style.transform = 'translateX(0)';
+        const overlay = document.getElementById('historyDrawerOverlay');
+        if (overlay) {
+          overlay.style.opacity = '1';
+          overlay.style.pointerEvents = 'auto';
+        }
+      }
+    } else {
+      document.body.classList.toggle('sidebar-open');
+    }
+  } else {
+    // 桌面端不做任何事，sidebar 一直可见
+  }
+});
+document.addEventListener('click', (e) => {
+  if (window.innerWidth > 768) return;
+  if (!document.body.classList.contains('sidebar-open')) return;
+  const sidebar = $('sidebar');
+  if (!sidebar) return;
+  // 点击了 sidebar 内部的任何元素，不关闭
+  if (sidebar.contains(e.target)) return;
+  // 点击了 historyBtn，不关闭
+  if (e.target === historyBtn) return;
+  // 其他地方关闭
+  document.body.classList.remove('sidebar-open');
+});
+/* ════════════════════════════════════════════════════════════
+   INTRO → APP TRANSITION
+════════════════════════════════════════════════════════════ */
+function startApp() {
+  if (introScreen.classList.contains('hidden')) return;
+  introScreen.classList.add('hidden');
+  appScreen.classList.remove('hidden');
+  exitSealedMode();
+  userInput.focus();
+}
+beginBtn.addEventListener('click', startApp);
+beginBtn.addEventListener('touchend', startApp, { passive: true });
+/* ════════════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════════════ */
+async function init() {
+  applyLang();
+  autoGrow();
+  getCurrentConversationDayKey();
+
+  // 计算天数（以首次相遇日期为准）
+  State.dayNumber = getDayNumberFromEntries();
+  dayBadge.textContent = t().dayLabel(State.dayNumber);
+
+  await renderHistory();
+  await runAutoDayWrapIfNeeded();
+
+  // 检查今天是否已经有记录
+  const todayKey = getCurrentConversationDayKey();
+  const todayGroup = State.historyGroups.find(g => g.dateKey === todayKey);
+  const hasTodayEntry = !!(todayGroup &&
+    todayGroup.entries.filter(e => e.content !== '[今天到这里]').length > 0);
+
+  if (!hasTodayEntry) {
+    await showDailyOpening();
+  } else {
+    renderDayMessages(todayGroup);
+    exitSealedMode();
+  }
+
+  if (State.dayNumber >= 21 && !State.day21Shown) {
+    setTimeout(showDay21, 1200);
+  }
+}
+init();
+</script>
+</body>
+</html>
